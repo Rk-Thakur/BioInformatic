@@ -1,0 +1,5 @@
+##fileformat=VCFv4.2
+##reference=GRCh38
+##contig=<ID=12>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	S10
+12	abc	.	A	C	.	PASS	.	GT	0/1

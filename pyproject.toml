@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ge-ehr"
+version = "0.1.0"
+description = "GE-EHR for monogenic diabetes: reclassification-aware genomic decision support"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Ranjan Kumar Thakur" },
+    { name = "Barsha Singh Thakuri" },
+    { name = "Bishal Awasthi" },
+]
+dependencies = [
+    "flask>=3.0",
+    "flask-sqlalchemy>=3.1",
+    "sqlalchemy>=2.0",
+    "flask-migrate>=4.0",
+    "flask-login>=0.6",
+    "flask-wtf>=1.2",
+    "cyvcf2>=0.31",
+    "fhir.resources>=7.0",
+    "pyyaml>=6.0",
+    "pandas>=2.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "pre-commit>=3.7",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "slow: uses the full ClinVar release files in data/raw (deselect with -m 'not slow')",
+]
+
+[tool.coverage.run]
+source = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
