@@ -15,6 +15,14 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+## Prepare the data (Stage 1a)
+
+```bash
+python -m scripts.clean.run_all   # data/raw -> data/clean + data/clean/QUALITY_REPORT.md
+```
+
+See [data/raw/README.md](data/raw/README.md) for where each raw file comes from.
+
 ## Run
 
 ```bash

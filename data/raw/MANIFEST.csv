@@ -1,0 +1,9 @@
+path,bytes,sha256,source
+clingen/erepo.tabbed.txt,32540276,9eeef6fe54198ab86597c7adc45255a5b3cb39a77264c0293a88fa6516c718a4,https://erepo.clinicalgenome.org/evrepo/ (export: erepo.tabbed.txt)
+clinvar/clinvar_20230107.vcf.gz,62605025,c463223213d75450f34cdab3584476679134580633785fd42575c712e003beec,https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/
+clinvar/clinvar_20231230.vcf.gz,91208165,86f055615b6773eb70c934f845a8f3244436beaea2d508723f4a4d90898f3c3b,https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/
+clinvar/clinvar_20261019.vcf.gz,200670148,1dd89965cdd851bca72aa8aa6ffaca6c07f410c52f04c95c0cc446b4b75f2610,https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/
+synthea/diabetes_conditions.numbers,326907,4416c81f9e382a540be5c12f577b7c672525e925ecb0f749a26731a53bea5cb8,"Synthea diabetes module export (Apple Numbers; CSV export pending, C12)"
+synthea/diabetes_medications.numbers,1154572,6c29a24278395decb9da63d90724c014ea8d450bfaf366ca8fcefada2ed0e046,"Synthea diabetes module export (Apple Numbers; CSV export pending, C12)"
+synthea/diabetes_patients.numbers,308138,90688844e869e38266f0e8725e09d08d93a6fd81e9e4533ae25e5c9b6400b768,"Synthea diabetes module export (Apple Numbers; CSV export pending, C12)"
+synthea/scenarios.numbers,234970,8a6577813aca983f6fdd326adfaa0e0d277710c9ab97f702115823494da462f1,"Synthea diabetes module export (Apple Numbers; CSV export pending, C12)"

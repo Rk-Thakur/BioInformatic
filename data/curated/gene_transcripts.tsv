@@ -1,0 +1,7 @@
+# Reference transcripts (DD16). paper_version = as written in the paper §4.2;
+# current_version = version used by ClinGen eRepo classifications (checked 2026-10-29).
+# Genes without an expert panel have no eRepo transcript yet; fill from MANE Select when needed.
+gene	accession	paper_version	current_version
+GCK	NM_000162	NM_000162.5	NM_000162.5
+HNF1A	NM_000545	NM_000545.6	NM_000545.8
+HNF4A	NM_175914	NM_175914.4	NM_175914.5

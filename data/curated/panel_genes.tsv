@@ -1,0 +1,11 @@
+# Monogenic diabetes gene panel, GRCh38.p14 (GCF_000001405.40), 1-based inclusive coordinates.
+# Source: NCBI Gene E-utilities esummary (annotation release RS_2025_08), retrieved 2026-10-29.
+# NCBI reports 0-based chrstart/chrstop; converted here as start=min+1, end=max+1.
+gene	ncbi_gene_id	chrom	start	end	strand
+GCK	2645	7	44143213	44189439	-
+HNF1A	6927	12	120978543	121002512	+
+HNF4A	3172	20	44355699	44434596	+
+HNF1B	6928	17	37686431	37745059	-
+KCNJ11	3767	11	17385248	17389346	-
+ABCC8	6833	11	17392498	17476845	-
+INS	3630	11	2159779	2161209	-

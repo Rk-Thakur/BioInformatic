@@ -18,6 +18,7 @@ instance/
 # Large or regenerable data (keep the folders, not the files)
 data/raw/**
 !data/raw/MANIFEST.csv
+!data/raw/README.md
 !data/raw/.gitkeep
 data/clean/**
 !data/clean/QUALITY_REPORT.md
@@ -39,8 +40,8 @@ eval/tmp/
 # Test cohort VCFs are small and needed by the scenario tests: keep them
 !ge_ehr_test_data_v2/**
 
-# Raw inputs still at the top level until Stage 1a (C1) moves them to data/raw/
-/erepo.tabbed.txt
-/*.numbers
-/ge_ehr_test_data/
-/ge_ehr_test_data_OLD_clinvar/
+# Superseded inputs kept locally for reference only
+data/archive/
+
+# Stage 1a curated inputs are small: keep them
+!data/curated/**

@@ -1,53 +1,24 @@
 """Shared helpers: load a ClinVar VCF restricted to the 7 GE-EHR genes and
 compare classifications between releases.
 
-Standard library only, so it runs before cyvcf2 is installed.
+Used by build_reclass_cohort.py; needs the project installed (pip install -e .).
 """
 
 import gzip
 import re
 
-PANEL_GENES = ("GCK", "HNF1A", "HNF4A", "HNF1B", "KCNJ11", "ABCC8", "INS")
+# Classification rules live in app/domain.py (one source of truth for the
+# cleaning scripts, this cohort builder and the application).
+from app.domain import (  # noqa: F401  (re-exported for build_reclass_cohort.py)
+    ACTIONABLE,
+    NOT_CLASSIFIED,
+    PANEL_GENES,
+    band,
+    change_category,
+    normalize_clnsig,
+)
+
 _GENE_BYTES = tuple(f"{g}:".encode() for g in PANEL_GENES)
-
-ACTIONABLE = {"P", "LP", "P/LP"}
-NOT_CLASSIFIED = "NC"  # variant key absent from the release
-
-_CLNSIG_MAP = {
-    "pathogenic": "P",
-    "likely_pathogenic": "LP",
-    "pathogenic/likely_pathogenic": "P/LP",
-    "uncertain_significance": "VUS",
-    "likely_benign": "LB",
-    "benign": "B",
-    "benign/likely_benign": "B/LB",
-    # ClinVar renamed this term in 2024; both mean the same thing.
-    "conflicting_interpretations_of_pathogenicity": "CONFLICT",
-    "conflicting_classifications_of_pathogenicity": "CONFLICT",
-}
-
-
-def normalize_clnsig(raw):
-    """Map a raw CLNSIG value to P / LP / P/LP / VUS / LB / B / B/LB / CONFLICT / OTHER."""
-    if not raw:
-        return "OTHER"
-    # "Pathogenic|risk_factor" or "Likely_pathogenic,_low_penetrance" -> primary term
-    primary = re.split(r"[|,]", raw)[0].strip("_").lower()
-    return _CLNSIG_MAP.get(primary, "OTHER")
-
-
-def band(cls):
-    return "actionable" if cls in ACTIONABLE else "non-actionable"
-
-
-def change_category(old_cls, new_cls):
-    """Table IV categories of the paper."""
-    if old_cls == new_cls:
-        return "unchanged"
-    old_b, new_b = band(old_cls), band(new_cls)
-    if old_b != new_b:
-        return "upgrade" if new_b == "actionable" else "downgrade"
-    return "within_actionable" if old_b == "actionable" else "within_nonactionable"
 
 
 def _info_field(info, key):

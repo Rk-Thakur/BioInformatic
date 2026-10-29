@@ -39,6 +39,7 @@ include = ["app*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = "-ra"
 markers = [
     "slow: uses the full ClinVar release files in data/raw (deselect with -m 'not slow')",
@@ -56,4 +57,8 @@ extend-exclude = ["migrations", ".venv"]
 select = ["E", "F", "W", "I", "B", "UP"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["app"]
+known-first-party = ["app", "scripts"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test fixtures hold literal VCF/eRepo lines; wrapping them hurts readability.
+"tests/*" = ["E501"]

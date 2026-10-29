@@ -19,8 +19,9 @@ whose class changes between the two releases.
 
 Usage:
   python scripts/build_reclass_cohort.py \
-      --old clinvar_20230107.vcf.gz --new clinvar.vcf.gz \
-      --source ge_ehr_test_data --out ge_ehr_test_data_v2
+      --old data/raw/clinvar/clinvar_20230107.vcf.gz \
+      --new data/raw/clinvar/clinvar_20261019.vcf.gz \
+      --source data/archive/ge_ehr_test_data --out ge_ehr_test_data_v2
 """
 
 import argparse
@@ -193,7 +194,9 @@ def main():
     ap.add_argument("--old", required=True, help="old ClinVar VCF (.vcf.gz)")
     ap.add_argument("--new", required=True, help="new ClinVar VCF (.vcf.gz)")
     ap.add_argument(
-        "--source", default="ge_ehr_test_data", help="existing cohort folder (read only)"
+        "--source",
+        default="data/archive/ge_ehr_test_data",
+        help="existing cohort folder (read only)",
     )
     ap.add_argument("--out", default="ge_ehr_test_data_v2", help="output folder (must not exist)")
     args = ap.parse_args()
