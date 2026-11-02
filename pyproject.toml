@@ -24,6 +24,7 @@ dependencies = [
     "fhir.resources>=7.0",
     "pyyaml>=6.0",
     "pandas>=2.2",
+    "numbers-parser>=4.10",  # reads the Synthea export (Apple Numbers), cleaning rule C12
 ]
 
 [project.optional-dependencies]
@@ -51,7 +52,7 @@ source = ["app"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-extend-exclude = ["migrations", ".venv"]
+extend-exclude = ["migrations", ".venv", "files"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]

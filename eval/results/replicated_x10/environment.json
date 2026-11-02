@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-02T13:41:53",
+  "git_commit": "388550a",
+  "git_dirty": true,
+  "python": "3.14.7",
+  "sqlite": "3.53.4",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "cpu": "Apple M4",
+  "replicate": 10,
+  "repeats": 3,
+  "therapy_as_of": "2026-10-19"
+}

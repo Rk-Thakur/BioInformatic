@@ -1,0 +1,16 @@
+# SNOMED CT condition codes from the Synthea export (C14).
+# category: diabetes = the diabetes diagnosis itself; complication = a diabetes complication;
+# pregnancy = active pregnancy (DD15); other. Codes not listed are reported and treated as "other".
+code	category	diabetes_type	description
+44054006	diabetes	type2	Diabetes mellitus type 2 (disorder)
+46635009	diabetes	type1	Diabetes mellitus type 1 (disorder)
+427089005	diabetes	secondary	Diabetes mellitus due to cystic fibrosis (disorder)
+127013003	complication		Disorder of kidney due to diabetes mellitus (disorder)
+368581000119106	complication		Neuropathy due to type 2 diabetes mellitus (disorder)
+90781000119102	complication		Microalbuminuria due to type 2 diabetes mellitus (disorder)
+1551000119108	complication		Nonproliferative diabetic retinopathy due to type II diabetes mellitus (disorder)
+157141000119108	complication		Proteinuria due to type 2 diabetes mellitus (disorder)
+97331000119101	complication		Macular edema and retinopathy due to type 2 diabetes mellitus (disorder)
+1501000119109	complication		Proliferative diabetic retinopathy due to type II diabetes mellitus (disorder)
+72892002	pregnancy		Normal pregnancy (finding)
+47200007	pregnancy		High risk pregnancy (finding)

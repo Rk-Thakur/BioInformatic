@@ -29,8 +29,8 @@ See [data/raw/README.md](data/raw/README.md) for where each raw file comes from.
 ```bash
 flask db upgrade        # create or upgrade the database (instance/ge_ehr.db)
 flask load-knowledge    # load cleaned ClinVar releases, ClinGen, transcripts and rules v1
-flask import-flags data/curated/activating_variants.tsv   # activating KCNJ11/ABCC8 list (rule D4)
-flask seed-cohort       # load the 33 test patients (ge_ehr_test_data_v2) and their VCFs
+flask seed-synthea      # load the 87 cleaned Synthea patients + upload the 33 cohort VCFs
+flask seed-cohort       # (alternative) only the 33 cohort patients, therapy from scenarios.csv
 flask list-knowledge    # show releases and rule versions (which one is current)
 flask kb-diff 2023-01-07 2026-10-19   # upgrades/downgrades between two releases
 flask reevaluate 2026-10-19            # F5 Algorithm 2: switch release, re-evaluate affected patients

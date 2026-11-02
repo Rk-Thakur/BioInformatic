@@ -12,7 +12,7 @@ from collections import Counter
 from pathlib import Path
 
 from app.domain import ACTIONABLE, PANEL_GENES, change_category
-from scripts.clean import clinvar, erepo, genes
+from scripts.clean import clinvar, erepo, genes, synthea
 from scripts.clean.common import Report, read_tsv, sha256, write_tsv
 
 RAW_SOURCES = {
@@ -110,6 +110,12 @@ def main(argv=None):
     ap.add_argument("--clean", default="data/clean")
     ap.add_argument("--curated", default="data/curated")
     ap.add_argument("--skip-manifest", action="store_true", help="skip checksums (faster)")
+    ap.add_argument(
+        "--cohort", default="ge_ehr_test_data_v2", help="cohort whose patients must be in Synthea"
+    )
+    ap.add_argument(
+        "--as-of", default="2026-10-19", help="date for 'current therapy' (THERAPY_REFERENCE_DATE)"
+    )
     args = ap.parse_args(argv)
     raw, clean, curated = Path(args.raw), Path(args.clean), Path(args.curated)
     clean.mkdir(parents=True, exist_ok=True)
@@ -121,6 +127,8 @@ def main(argv=None):
         "every number below is recomputed on each run.",
     ]
 
+    if any((raw / "synthea").glob("*.numbers")):
+        synthea.export_numbers(raw / "synthea")  # C12 first, so the CSVs are in the manifest
     s = report.section("C1 · Raw inputs")
     if not args.skip_manifest:
         write_manifest(raw, s)
@@ -162,8 +170,17 @@ def main(argv=None):
     erepo_rows = erepo.clean_erepo(raw / "clingen" / "erepo.tabbed.txt", transcripts, releases, s)
     write_tsv(clean / "erepo_classifications.tsv", erepo.COLUMNS, erepo_rows)
 
-    s = report.section("C12–C14 · Synthea (pending)")
-    s.note("Waiting for the `.numbers` files in `data/raw/synthea/` to be exported to CSV (C12).")
+    s = report.section("C12–C14 · Synthea")
+    synthea_dir = raw / "synthea"
+    if any(synthea_dir.glob("*.numbers")):
+        synthea.export_numbers(synthea_dir, s)  # again, only to list the files in the report
+    cohort_ids = []
+    if (Path(args.cohort) / "scenarios.csv").exists():
+        with open(Path(args.cohort) / "scenarios.csv", newline="") as fh:
+            cohort_ids = [r["patient_id"] for r in csv.DictReader(fh)]
+    synthea.clean_synthea(
+        synthea_dir, curated, clean, dt.date.fromisoformat(args.as_of), cohort_ids, s
+    )
 
     report.write(clean / "QUALITY_REPORT.md")
     print(f"Wrote {clean}/ ({len(releases)} ClinVar releases, {len(erepo_rows)} eRepo rows)")

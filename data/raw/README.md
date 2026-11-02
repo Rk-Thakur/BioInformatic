@@ -10,7 +10,7 @@ The data files are git-ignored (too large); re-download them as below.
 | `clinvar/clinvar_20231230.vcf.gz` | ClinVar GRCh38 VCF, release 2023-12-30 | `.../archive_2.0/2023/clinvar_20231230.vcf.gz` |
 | `clinvar/clinvar_20261019.vcf.gz` | ClinVar GRCh38 VCF, release 2026-10-19 | `.../archive_2.0/2026/clinvar_20261019.vcf.gz` (was the current `clinvar.vcf.gz` when downloaded) |
 | `clingen/erepo.tabbed.txt` | ClinGen Evidence Repository, full export | https://erepo.clinicalgenome.org/evrepo/ → Download → tab-separated |
-| `synthea/*.numbers` | Synthea diabetes cohort (Apple Numbers) | Export each to CSV into this folder (cleaning rule C12) |
+| `synthea/*.numbers` | Synthea diabetes cohort (Apple Numbers) | Provided by the team. The cleaning step converts each to `synthea/*.csv` automatically (rule C12, `numbers-parser`) |
 
 After downloading, compare checksums with `MANIFEST.csv`. A different checksum means a different file, and the
 quality report and the paper's numbers will change.

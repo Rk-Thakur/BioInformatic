@@ -1,0 +1,10 @@
+scenario,strategy,repeat,step,ms,variants_changed,patients_reevaluated,records_examined,alerts_created,alerts_superseded
+controlled,alert_once,0,2023-06-30,395.07,23,0,0,0,0
+controlled,alert_once,1,2023-06-30,401.84,23,0,0,0,0
+controlled,alert_once,2,2023-06-30,298.17,23,0,0,0,0
+controlled,full,0,2023-06-30,4087.88,23,330,173680,450,170
+controlled,full,1,2023-06-30,4192.82,23,330,173680,450,170
+controlled,full,2,2023-06-30,4009.77,23,330,173680,450,170
+controlled,change_driven,0,2023-06-30,3215.11,23,210,108640,450,170
+controlled,change_driven,1,2023-06-30,2822.14,23,210,108640,450,170
+controlled,change_driven,2,2023-06-30,2882.37,23,210,108640,450,170

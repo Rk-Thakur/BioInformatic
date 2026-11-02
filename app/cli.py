@@ -300,6 +300,41 @@ def seed_cohort_cmd(cohort):
     click.echo(f"Patients: {created} created, {skipped} already present, {rejected} VCFs rejected")
 
 
+@click.command("seed-synthea")
+@click.option(
+    "--cohort",
+    default="ge_ehr_test_data_v2",
+    show_default=True,
+    type=click.Path(exists=True, file_okay=False),
+)
+def seed_synthea_cmd(cohort):
+    """Load the cleaned Synthea patients (data/clean/) and upload the cohort's VCFs."""
+    from app.genes import load_genes
+    from app.services.seed import seed_synthea
+    from app.services.workflow import NoCurrentReleaseError
+
+    clean = Path(current_app.config["DATA_CLEAN_DIR"])
+    if not (clean / "patients.csv").exists():
+        raise click.ClickException(
+            f"{clean}/patients.csv missing: run `python -m scripts.clean.run_all`"
+        )
+    genes = load_genes(Path(current_app.config["DATA_CURATED_DIR"]) / "panel_genes.tsv")
+    try:
+        r = seed_synthea(db.session, clean, cohort, genes, _as_of())
+        db.session.commit()
+    except NoCurrentReleaseError as exc:
+        db.session.rollback()
+        raise click.ClickException(str(exc)) from exc
+    click.echo(
+        f"Patients: {r.patients_created} created ({r.inactive} inactive/deceased), "
+        f"{r.patients_skipped} already present"
+    )
+    click.echo(
+        f"VCFs uploaded: {r.cohort_uploads} ({r.rejected_uploads} rejected); "
+        f"{r.cohort_not_in_synthea} cohort patients are not in Synthea (created from scenarios.csv)"
+    )
+
+
 COMMANDS = (
     init_db,
     show_config,
@@ -315,6 +350,7 @@ COMMANDS = (
     apply_rule_cmd,
     runs_cmd,
     seed_cohort_cmd,
+    seed_synthea_cmd,
 )
 
 

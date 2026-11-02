@@ -1,6 +1,6 @@
 # Data quality report (Stage 1a)
 
-Generated 2026-10-29 by `python -m scripts.clean.run_all`. Raw inputs in `data/raw/` are never modified; every number below is recomputed on each run.
+Generated 2026-11-02 by `python -m scripts.clean.run_all`. Raw inputs in `data/raw/` are never modified; every number below is recomputed on each run.
 
 ## C1 · Raw inputs
 
@@ -12,9 +12,13 @@ Generated 2026-10-29 by `python -m scripts.clean.run_all`. Raw inputs in `data/r
 | clinvar/clinvar_20230107.vcf.gz | 62,605,025 | c463223213d7 |
 | clinvar/clinvar_20231230.vcf.gz | 91,208,165 | 86f055615b67 |
 | clinvar/clinvar_20261019.vcf.gz | 200,670,148 | 1dd89965cdd8 |
+| synthea/diabetes_conditions.csv | 24,729 | 28df24ea06fe |
 | synthea/diabetes_conditions.numbers | 326,907 | 4416c81f9e38 |
+| synthea/diabetes_medications.csv | 941,345 | 2bd4ffe33d6c |
 | synthea/diabetes_medications.numbers | 1,154,572 | 6c29a2427839 |
+| synthea/diabetes_patients.csv | 12,633 | ca5c2e4efd72 |
 | synthea/diabetes_patients.numbers | 308,138 | 90688844e869 |
+| synthea/scenarios.csv | 3,458 | 1a236b7a976e |
 | synthea/scenarios.numbers | 234,970 | 8a6577813aca |
 
 ## C11 · Gene coordinates
@@ -268,6 +272,56 @@ Generated 2026-10-29 by `python -m scripts.clean.run_all`. Raw inputs in `data/r
 - Approved on or before ClinVar release 2026-10-19: 1,165 of 1,167 (only these may override that release, DD6).
 - Rows without HGVS on the reference transcript: 26.
 
-## C12–C14 · Synthea (pending)
+## C12–C14 · Synthea
 
-- Waiting for the `.numbers` files in `data/raw/synthea/` to be exported to CSV (C12).
+| Rule | What | Rows |
+|---|---|---:|
+| in | patients | 87 |
+| C14 | deceased: kept, marked inactive (no new alerts) | 23 |
+| C14 | deceased flag set but no death date | 0 |
+| C14 | no diabetes diagnosis date (age at diagnosis unknown) | 0 |
+| in | medication rows (one per refill) | 5,149 |
+| C13 | drug class from RxNorm code | 5,149 |
+| C13 | drug class from description keyword | 0 |
+| C13 | drug class defaulted to 'other' | 0 |
+| C13 | drug class differs from the export's DRUG_CLASS column | 0 |
+| C13 | dropped: no start date | 0 |
+| C13 | stop before start (set to start) | 7 |
+| C13 | therapy periods after merging refills (gap ≤ 31 days) | 79 |
+| C13 | periods ended at the patient's death | 21 |
+| in | condition rows | 222 |
+| C14 | conditions categorized 'diabetes' | 88 |
+| C14 | conditions categorized 'complication' | 134 |
+| C14 | conditions categorized 'pregnancy' | 0 |
+| C14 | conditions categorized 'other' | 0 |
+| out | patients written (data/clean/patients.csv) | 87 |
+
+**C12 · Numbers → CSV**
+
+| Source | CSV | Rows |
+|---|---|---|
+| diabetes_conditions.numbers | diabetes_conditions.csv | 222 |
+| diabetes_medications.numbers | diabetes_medications.csv | 5,149 |
+| diabetes_patients.numbers | diabetes_patients.csv | 87 |
+| scenarios.numbers | scenarios.csv | 30 |
+
+**Diabetes type (from condition codes)**
+
+| Type | Patients |
+|---|---|
+| secondary | 1 |
+| type2 | 86 |
+
+**Current therapy on 2026-10-19**
+
+| Therapy | Patients |
+|---|---|
+| none | 45 |
+| metformin | 23 |
+| insulin + metformin | 10 |
+| insulin | 9 |
+
+- Age at diagnosis recomputed in months from dates; largest difference from the export's AGE_AT_DIAGNOSIS (years x 12): 0.6 months.
+- 15 of these 15 are deceased patients: the export still lists their last medication, the cleaned data ends it at death (C13).
+- 15 patient(s) whose current therapy differs from the export's CURRENT_THERAPY column (export → cleaned): 1cee85ea insulin + metformin → none; 29c0886d insulin + metformin → none; 30c8c7c0 metformin → none; 487d6fd9 metformin → none; 6003cd79 insulin + metformin → none; 6604d4b3 insulin + metformin → none; 8a0eed13 metformin → none; ab7df255 insulin → none; bc11f46d metformin → none; d8be6531 insulin + metformin → none …
+- Cohort patients missing from Synthea: 3 of 33 (02960dc1, 737a78a3, 781eee69). Patients created by scripts/build_reclass_cohort.py (RS3-RS5) are not in Synthea by design.

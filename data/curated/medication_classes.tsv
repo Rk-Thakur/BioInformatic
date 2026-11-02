@@ -1,0 +1,6 @@
+# Drug class per RxNorm code (C13). Codes not listed fall back to keywords in the
+# description (scripts/clean/synthea.py: KEYWORDS); anything else is "other".
+rxnorm_code	drug_class	description
+106892	insulin	insulin isophane, human 70 UNT/ML / insulin, regular, human 30 UNT/ML Injectable Suspension [Humulin]
+311034	insulin	insulin, regular, human 100 UNT/ML Injectable Solution
+860975	metformin	24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet
