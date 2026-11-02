@@ -203,6 +203,103 @@ def kb_diff(old_version, new_version):
         click.echo(f"  {gene:<8}{gc['upgrade']:>6}{gc['downgrade']:>6}")
 
 
+# ------------------------------------------------------------------------ re-evaluation (F5)
+
+
+def _as_of():
+    import datetime as dt
+
+    return dt.date.fromisoformat(current_app.config["THERAPY_REFERENCE_DATE"])
+
+
+def _print_run(run):
+    click.echo(
+        f"Run {run.id} ({run.trigger}, {run.mode}): {run.old_ref} -> {run.new_ref}\n"
+        f"  variants examined {run.variants_examined:,}, changed {run.variants_changed:,}\n"
+        f"  patients re-evaluated {run.patients_touched:,}\n"
+        f"  alerts created {run.alerts_created:,}, superseded {run.alerts_superseded:,}, "
+        f"provenance updates {run.provenance_updates:,}\n"
+        f"  {run.notes or ''}"
+    )
+
+
+@click.command("reevaluate")
+@click.argument("version")
+@click.option(
+    "--mode",
+    type=click.Choice(["change_driven", "full", "alert_once"]),
+    default="change_driven",
+    show_default=True,
+)
+def reevaluate_cmd(version, mode):
+    """Algorithm 2: make ClinVar release VERSION current and re-evaluate affected patients."""
+    from app.services.reevaluate import ReevaluationError, reevaluate_release
+
+    try:
+        run = reevaluate_release(db.session, version, _as_of(), mode=mode)
+        db.session.commit()
+    except ReevaluationError as exc:
+        db.session.rollback()
+        raise click.ClickException(str(exc)) from exc
+    _print_run(run)
+
+
+@click.command("apply-rule")
+@click.argument("code")
+@click.argument("version", type=int)
+@click.option(
+    "--mode",
+    type=click.Choice(["change_driven", "full", "alert_once"]),
+    default="change_driven",
+    show_default=True,
+)
+def apply_rule_cmd(code, version, mode):
+    """Algorithm 3: make rule CODE version VERSION current and re-run it for carriers."""
+    from app.services.reevaluate import ReevaluationError, reevaluate_rule
+
+    try:
+        run = reevaluate_rule(db.session, code, version, _as_of(), mode=mode)
+        db.session.commit()
+    except ReevaluationError as exc:
+        db.session.rollback()
+        raise click.ClickException(str(exc)) from exc
+    _print_run(run)
+
+
+@click.command("runs")
+@click.option("--limit", default=10, show_default=True)
+def runs_cmd(limit):
+    """Show the most recent re-evaluation runs (the F5 run log)."""
+    from app.models import ReevaluationRun
+
+    q = select(ReevaluationRun).order_by(ReevaluationRun.id.desc()).limit(limit)
+    for run in db.session.scalars(q):
+        _print_run(run)
+
+
+@click.command("seed-cohort")
+@click.option(
+    "--cohort",
+    default="ge_ehr_test_data_v2",
+    show_default=True,
+    type=click.Path(exists=True, file_okay=False),
+)
+def seed_cohort_cmd(cohort):
+    """Load the 33-patient test cohort (therapy from its scenarios.csv) and upload its VCFs."""
+    from app.genes import load_genes
+    from app.services.seed import seed_cohort
+    from app.services.workflow import NoCurrentReleaseError
+
+    genes = load_genes(Path(current_app.config["DATA_CURATED_DIR"]) / "panel_genes.tsv")
+    try:
+        created, skipped, rejected = seed_cohort(db.session, cohort, genes, _as_of())
+        db.session.commit()
+    except NoCurrentReleaseError as exc:
+        db.session.rollback()
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"Patients: {created} created, {skipped} already present, {rejected} VCFs rejected")
+
+
 COMMANDS = (
     init_db,
     show_config,
@@ -214,6 +311,10 @@ COMMANDS = (
     load_knowledge,
     list_knowledge,
     kb_diff,
+    reevaluate_cmd,
+    apply_rule_cmd,
+    runs_cmd,
+    seed_cohort_cmd,
 )
 
 

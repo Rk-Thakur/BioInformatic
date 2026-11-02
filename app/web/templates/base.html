@@ -3,17 +3,86 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}GE-EHR{% endblock %}</title>
+  <title>{% block title %}GE-EHR{% endblock %} · GE-EHR</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 0; color: #1f2933; background: #f7f9fb; }
-    header { background: #12355b; color: #fff; padding: 12px 24px; }
-    .advisory { background: #fff4d6; border-bottom: 1px solid #e8c766; padding: 8px 24px; font-size: 14px; }
-    main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+    :root {
+      --bg: #f6f8fa; --surface: #ffffff; --text: #1f2933; --muted: #5f6b7a; --border: #d9e0e7;
+      --brand: #12355b; --brand-text: #ffffff; --link: #1d5fa3;
+      --high: #b42318; --high-bg: #fde8e7; --medium: #9a5b00; --medium-bg: #fff2d6;
+      --low: #245c9e; --low-bg: #e4eefb; --info: #4b5563; --info-bg: #eef1f4;
+      --ok: #1b6b3a; --ok-bg: #e3f4e9; --warn-bg: #fff6dd; --warn-border: #e8c766;
+      --radius: 8px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #11161c; --surface: #1a2129; --text: #e6ebf0; --muted: #9aa7b4; --border: #2d3742;
+        --brand: #0d2742; --link: #7fb4ff;
+        --high: #ff8a80; --high-bg: #3a1714; --medium: #f5c46b; --medium-bg: #36290f;
+        --low: #8dbbff; --low-bg: #14263d; --info: #b8c2cc; --info-bg: #252d36;
+        --ok: #7dd3a0; --ok-bg: #12301f; --warn-bg: #2f2812; --warn-border: #6b5a22;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); }
+    a { color: var(--link); }
+    header { background: var(--brand); color: var(--brand-text); padding: 10px 16px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    header .brand { font-weight: 700; color: inherit; text-decoration: none; }
+    header nav { display: flex; gap: 14px; flex: 1; flex-wrap: wrap; }
+    header nav a, header .user { color: var(--brand-text); opacity: .9; text-decoration: none; }
+    header nav a.active { opacity: 1; text-decoration: underline; }
+    header form { margin: 0; }
+    header button { background: transparent; color: var(--brand-text); border: 1px solid rgba(255,255,255,.5); }
+    .advisory { background: var(--warn-bg); border-bottom: 1px solid var(--warn-border); padding: 6px 16px; font-size: 13px; }
+    main { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+    h1 { font-size: 24px; margin: 0 0 4px; } h2 { font-size: 18px; margin: 28px 0 10px; }
+    .muted { color: var(--muted); } .small { font-size: 13px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+    .table-wrap { overflow-x: auto; }
+    .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .sev-high { color: var(--high); background: var(--high-bg); } .sev-medium { color: var(--medium); background: var(--medium-bg); }
+    .sev-low { color: var(--low); background: var(--low-bg); } .sev-info { color: var(--info); background: var(--info-bg); }
+    .ok { color: var(--ok); background: var(--ok-bg); }
+    .alert-card { border-left: 4px solid var(--border); }
+    .alert-card.sev-border-high { border-left-color: var(--high); } .alert-card.sev-border-medium { border-left-color: var(--medium); }
+    .alert-card.sev-border-low { border-left-color: var(--low); } .alert-card.sev-border-info { border-left-color: var(--info); }
+    .flash { padding: 10px 14px; border-radius: var(--radius); margin-bottom: 12px; }
+    .flash.error { background: var(--high-bg); color: var(--high); } .flash.success { background: var(--ok-bg); color: var(--ok); }
+    form.inline { display: inline; }
+    label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 3px; }
+    input, select { font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); max-width: 100%; }
+    button, .button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--link); background: var(--link); color: #fff; cursor: pointer; text-decoration: none; display: inline-block; }
+    button.secondary { background: transparent; color: var(--link); }
+    .errors { color: var(--high); font-size: 13px; margin: 2px 0; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+    code { font-size: 13px; }
+    @media (max-width: 640px) { header nav { order: 3; flex-basis: 100%; } header .user { margin-left: auto; } }
   </style>
 </head>
 <body>
-  <header><strong>GE-EHR</strong> · Monogenic diabetes decision support</header>
-  <div class="advisory">Research prototype · synthetic data only · recommendations are advisory and require specialist review.</div>
-  <main>{% block content %}{% endblock %}</main>
+  <header>
+    <a class="brand" href="{{ url_for('main.index') }}">GE-EHR</a>
+    {% if current_user.is_authenticated %}
+      <nav>
+        <a href="{{ url_for('patients.index') }}" class="{{ 'active' if request.blueprint == 'patients' }}">Patients</a>
+        {% if current_user.can_view_recommendations() %}
+          <a href="{{ url_for('alerts.index') }}" class="{{ 'active' if request.blueprint == 'alerts' }}">Alerts</a>
+          <a href="{{ url_for('knowledge.index') }}" class="{{ 'active' if request.blueprint == 'knowledge' }}">Knowledge</a>
+        {% endif %}
+      </nav>
+      <span class="user small">{{ current_user.username }} · {{ current_user.role.replace('_', ' ') }}</span>
+      <form method="post" action="{{ url_for('auth.logout') }}">{{ logout_form.csrf_token }}<button type="submit">Log out</button></form>
+    {% endif %}
+  </header>
+  <div class="advisory">Research prototype · synthetic data only · recommendations are advisory and require specialist review. GE-EHR never changes therapy.</div>
+  <main>
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+      <div class="flash {{ category }}" role="status">{{ message }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
 </body>
 </html>

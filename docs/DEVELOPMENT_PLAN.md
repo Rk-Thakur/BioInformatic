@@ -1,6 +1,6 @@
 # GE-EHR for Monogenic Diabetes — Development Plan
 
-Version 1.4 · 2026-11-02 (Stage 2 F1–F3 done; patient loading waits for Synthea C12–C14) · Source of truth for scope: the paper *"GE-EHR for Monogenic Diabetes: Reclassification-Aware Genomic Decision Support in the EHR"* (Thakur, Thakuri, Awasthi).
+Version 1.7 · 2026-11-02 (Stage 5 done except the Synthea 10k cohort; Stage 2 Synthea loading waits for C12–C14) · Source of truth for scope: the paper *"GE-EHR for Monogenic Diabetes: Reclassification-Aware Genomic Decision Support in the EHR"* (Thakur, Thakuri, Awasthi).
 
 ---
 
@@ -120,6 +120,16 @@ The paper leaves these open. Decide them now and record them in the paper's Meth
 | DD20 | **"Activating" (D4) comes from ClinVar disease names for now.** A KCNJ11/ABCC8 P/LP variant is flagged activating when ClinVar links it to neonatal diabetes and not to hyperinsulinism (`scripts/curate_activating.py`, 54 variants). Variants linked to both are left out. Hand-curated rows can be added and survive re-runs. State this as a limitation in the paper. |
 | DD21 | **When an alert stops applying because therapy changed, it is superseded, not deleted**, and the new outcome (usually an info note) is created. Example: an HNF1A patient who starts a sulfonylurea has the D2 alert superseded and gets a D2 info note. |
 | DD22 | **Info notes explain themselves.** The note names the condition that failed ("already on sulfonylurea", "diagnosed at 552 months, rule applies below 6", "not on the curated activating list"). |
+| DD23 | **A change no rule could match triggers no work.** Change-driven re-evaluation skips a changed variant when no current rule covering its gene matches the old or the new class (e.g. B → B/LB, CONFLICT → B). Such a change cannot alter any outcome, so the result is still identical to full recomputation (tested). Without this filter, every cohort patient was re-evaluated, because common benign background variants change label between releases. |
+| DD24 | **One review notice per downgraded variant**, not per superseded alert. It points at the most severe superseded alert and names all affected rules. Superseded info notes (e.g. D6) never produce a notice. |
+| DD25 | **Rule revisions (Algorithm 3) re-run only carriers of the rule's genes** and issue review notices when a treatment alert stops applying, as for downgrades. |
+| DD26 | **Deceased (inactive) patients are skipped by re-evaluation.** Their history is kept unchanged. |
+| DD27 | **A reviewed alert stays in force.** "Reviewed" means a clinician acknowledged it, not that it stopped applying. Re-evaluation treats active and reviewed alerts alike (no duplicates, can still supersede them). The unique index covers both statuses (migration 5f7212f5b0ce). |
+| DD28 | **FHIR uses R4B**, the current R4-compatible release in `fhir.resources`. One Observation per variant found in ClinVar with an ACMG tier, plus a DiagnosticReport. Status is `amended` when the variant's interpretation changed after it was first reported. |
+| DD29 | **Until Synthea is cleaned, `flask seed-cohort` loads the 33 test patients** with therapy and age at diagnosis from `scenarios.csv` (S2 and S6 fixes applied in code). |
+| DD30 | **Rule revisions re-check only patients with a variant the rule could match** (old or new version's classes, under the current release). Same reasoning as DD23. On the cohort, D4 v1 → v2 re-checks 4 patients instead of 33. |
+| DD31 | **The controlled release injects changes into rare variants** (carried by at most 4 patients, like a family), because real pathogenic variants are rare. Variants with an expert classification approved by the controlled date are never chosen (it would override the injected class). |
+| DD32 | **Metrics are measured against an oracle**: the same cohort evaluated from scratch under the new knowledge (`eval/metrics.py` documents each definition). Until the Synthea 10k cohort exists, scaling is shown with the test cohort replicated x10 and labelled as such. |
 
 ---
 
@@ -312,9 +322,9 @@ Rules are stored as data, for example in `rules_v1.yaml`:
 | **1a** (3 days) | **Stage 1: Data cleaning** (§2a) 🟡 C1–C11 done, C12–C14 waiting for Synthea CSV | Tasks C1–C14; `data/clean/`; `data/clean/QUALITY_REPORT.md`; `tests/test_cleaning.py` | Every cleaning rule has a test; the report shows rows in, rows dropped per rule and rows out for every source; the raw files are untouched |
 | **1b** (2 days) | Data model and knowledge import ✅ Done 2026-11-02 | All models + migration; `flask import-release` and `flask import-expert` load the **cleaned** data; `flask import-rules rules_v1.yaml` | Both releases in the DB; a query gives about 192 upgrades and 75 downgrades (exact numbers recorded in the quality report) |
 | **2** | F1 + F2 + F3 🟡 F1–F3 done 2026-11-02; patient seeding waits for Synthea | VCF upload and validation; classification; rule engine D1–D6; `flask seed` loads the v2 cohort including the S2/S6 fixes; activating variants CSV | **S1–S10 pass** as automated tests |
-| **3** | F5 (core) | `reevaluate_release`, `reevaluate_rule`, idempotency, audit log, run log | **RS1–RS7 pass**; running twice changes nothing; results match `expected_changes.csv` 100% |
-| **4** | Web UI, security, F4 | Patient page, alert review, role checks, FHIR export | **S11, S12 pass**; clinician can walk through RS1 end to end in the browser |
-| **5** | Evaluation | 10k Synthea cohort; `eval/benchmark.py` for the 3 strategies; metrics; middle release (2023-12-30) as an extra step | Table VI filled with measured numbers; results CSV and plots committed |
+| **3** | F5 (core) ✅ Done 2026-11-02 | `reevaluate_release`, `reevaluate_rule`, idempotency, audit log, run log | **RS1–RS7 pass**; running twice changes nothing; results match `expected_changes.csv` 100% |
+| **4** | Web UI, security, F4 ✅ Done 2026-11-02 | Patient page, alert review, role checks, FHIR export | **S11, S12 pass**; clinician can walk through RS1 end to end in the browser |
+| **5** | Evaluation 🟡 Done 2026-11-02 except the Synthea 10k run | 10k Synthea cohort; `eval/benchmark.py` for the 3 strategies; metrics; middle release (2023-12-30) as an extra step | Table VI filled with measured numbers; results CSV and plots committed |
 | **6** | Hardening and write-up | Bug fixes, coverage ≥ 85% on services, README and demo script, screenshots, paper Sections 5–6 updated with results and the DD decisions | Paper draft with real results; tagged `v1.0` |
 
 **Critical path:** data cleaning → data model → F2 → F3 → F5 → evaluation. The UI (week 4) and FHIR can slip without blocking the paper's results.

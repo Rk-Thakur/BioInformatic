@@ -30,11 +30,25 @@ See [data/raw/README.md](data/raw/README.md) for where each raw file comes from.
 flask db upgrade        # create or upgrade the database (instance/ge_ehr.db)
 flask load-knowledge    # load cleaned ClinVar releases, ClinGen, transcripts and rules v1
 flask import-flags data/curated/activating_variants.tsv   # activating KCNJ11/ABCC8 list (rule D4)
+flask seed-cohort       # load the 33 test patients (ge_ehr_test_data_v2) and their VCFs
 flask list-knowledge    # show releases and rule versions (which one is current)
 flask kb-diff 2023-01-07 2026-10-19   # upgrades/downgrades between two releases
+flask reevaluate 2026-10-19            # F5 Algorithm 2: switch release, re-evaluate affected patients
+flask reevaluate 2026-10-19 --mode full   # same, recomputing everyone (benchmark)
+flask import-rules data/curated/rules_v2.yaml && flask apply-rule D4 2   # F5 Algorithm 3
+flask runs                              # the re-evaluation run log
 flask create-user alice --role clinician   # roles: clinician, lab_tech, admin
 flask run               # http://127.0.0.1:5000  (health check: /health)
 flask show-config       # print the settings in use
+```
+
+## Evaluation (Stage 5, paper Table VI)
+
+```bash
+python -m scripts.make_controlled_release   # eval/controlled/: release with 23 known injected changes
+python -m eval.benchmark                    # alert-once vs full vs change-driven -> eval/results/SUMMARY.md
+python -m eval.benchmark --replicate 10     # larger (replicated) cohort for timing
+python -m eval.reclassification             # per-gene ClinVar reclassification rates
 ```
 
 ## Test and lint

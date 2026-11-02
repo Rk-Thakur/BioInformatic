@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% from "macros.html" import alert_card %}
+{% block title %}Alerts{% endblock %}
+{% block content %}
+<h1>Alerts to review</h1>
+<p class="muted small">{{ alerts|length }} unreviewed · high priority first ·
+  {% if show_info %}<a href="{{ url_for('alerts.index') }}">hide info-level alerts</a>{% else %}<a href="{{ url_for('alerts.index', info=1) }}">include info-level alerts</a>{% endif %}</p>
+{% for a in alerts %}
+  {{ alert_card(a, action_form, request.full_path, show_patient=True) }}
+{% else %}
+  <p class="muted">Nothing to review.</p>
+{% endfor %}
+{% endblock %}

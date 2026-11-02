@@ -57,7 +57,7 @@ extend-exclude = ["migrations", ".venv"]
 select = ["E", "F", "W", "I", "B", "UP"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["app", "scripts"]
+known-first-party = ["app", "scripts", "eval"]
 
 [tool.ruff.lint.per-file-ignores]
 # Test fixtures hold literal VCF/eRepo lines; wrapping them hurts readability.

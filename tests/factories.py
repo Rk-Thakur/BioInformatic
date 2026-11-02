@@ -83,7 +83,7 @@ def write_vcf(path, records, sample="S"):
     """records: (chrom, pos, ref, alt, gt) tuples; writes a plain-text VCF."""
     lines = [
         "##fileformat=VCFv4.2",
-        "##contig=<ID=12>",
+        *(f"##contig=<ID={c}>" for c in ("1", "7", "11", "12", "17", "20")),
         '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">',
         "\t".join(
             ["#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT", sample]

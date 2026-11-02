@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "macros.html" import severity %}
+{% block title %}Knowledge{% endblock %}
+{% block content %}
+<h1>Knowledge base</h1>
+<p class="muted small">Every ClinVar release and rule version is kept. Imports and re-evaluation run from the command line
+  (<code>flask reevaluate</code>, <code>flask apply-rule</code>). {{ experts }} ClinGen expert-panel classifications loaded.</p>
+
+<h2>ClinVar releases</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Release</th><th>Records (7 genes)</th><th>Imported</th><th>Status</th></tr></thead>
+  <tbody>{% for r in releases %}
+    <tr><td>{{ r.version }}</td><td>{{ '{:,}'.format(r.record_count) }}</td><td class="small">{{ r.imported_at.strftime('%Y-%m-%d') }}</td>
+      <td>{% if r.is_current %}<span class="badge ok">current</span>{% else %}<span class="badge sev-info">not current</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="4" class="muted">No releases imported. Run <code>flask load-knowledge</code>.</td></tr>{% endfor %}</tbody>
+</table></div>
+
+<h2>Rules</h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>Rule</th><th>Genes</th><th>Severity</th><th>Recommendation</th><th>Status</th></tr></thead>
+  <tbody>{% for r in rules %}
+    <tr><td><strong>{{ r.code }}</strong> v{{ r.version }}</td><td class="small">{{ r.genes|join(', ') }}</td><td>{{ severity(r.severity) }}</td>
+      <td class="small">{{ r.recommendation }} <span class="muted">{{ r.source }}</span></td>
+      <td>{% if r.is_current %}<span class="badge ok">current</span>{% else %}<span class="badge sev-info">pending / retired</span>{% endif %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+
+<h2>Re-evaluation runs</h2>
+<div class="table-wrap"><table class="small">
+  <thead><tr><th>Run</th><th>Change</th><th>Mode</th><th>Variants changed</th><th>Patients</th><th>Created / superseded</th><th>Finished</th></tr></thead>
+  <tbody>{% for run in runs %}
+    <tr><td>#{{ run.id }} {{ run.trigger }}</td><td>{{ run.old_ref }} → {{ run.new_ref }}</td><td>{{ run.mode }}</td>
+      <td>{{ run.variants_changed }} of {{ run.variants_examined }}</td><td>{{ run.patients_touched }}</td>
+      <td>{{ run.alerts_created }} / {{ run.alerts_superseded }}</td><td>{{ run.finished_at.strftime('%Y-%m-%d %H:%M') if run.finished_at }}</td></tr>
+  {% else %}<tr><td colspan="7" class="muted">No re-evaluation runs yet.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

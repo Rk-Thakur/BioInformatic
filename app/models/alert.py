@@ -28,16 +28,16 @@ class Alert(db.Model):
         one_of("status", ALERT_STATUSES),
         one_of("severity", SEVERITIES),
         one_of("priority", PRIORITIES),
-        # DD9: at most one active alert per patient, variant, rule and kind.
+        # DD9: at most one open (active or reviewed) alert per patient, variant, rule and kind.
         Index(
-            "uq_alert_active",
+            "uq_alert_open",
             "patient_id",
             "patient_variant_id",
             "rule_code",
             "kind",
             unique=True,
-            sqlite_where=text("status = 'active'"),
-            postgresql_where=text("status = 'active'"),
+            sqlite_where=text("status IN ('active', 'reviewed')"),
+            postgresql_where=text("status IN ('active', 'reviewed')"),
         ),
     )
 
@@ -83,3 +83,5 @@ class AlertProvenance(db.Model):
     at: Mapped[datetime] = mapped_column(default=utcnow)
 
     alert: Mapped[Alert] = relationship(back_populates="provenance")
+    release = relationship("KbRelease")
+    rule = relationship("Rule")

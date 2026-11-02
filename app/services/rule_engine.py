@@ -18,7 +18,7 @@ from sqlalchemy import select
 
 from app.domain import ACTIONABLE
 from app.models import Alert, AlertProvenance, CuratedFlag, PatientVariant, Rule, audit
-from app.models.base import utcnow
+from app.models.base import OPEN_STATUSES, utcnow
 from app.services.classify import classify_keys
 
 # DD15: rules whose recommendation does not hold in pregnancy.
@@ -231,12 +231,15 @@ class ApplyResult:
     created: list = field(default_factory=list)
     kept: list = field(default_factory=list)
     superseded: list = field(default_factory=list)
+    provenance_added: int = 0
 
 
-def apply_outcomes(
-    session, patient, outcomes, release, *, run=None, priority="normal", reclassified=False
-):
+def apply_outcomes(session, patient, outcomes, release, *, run=None, reclassified_ids=frozenset()):
     """Write outcomes as alerts for one patient. Idempotent: same outcomes -> no change.
+
+    reclassified_ids: patient_variant ids whose classification was just upgraded (F5).
+    New alerts on them are marked reclassified, and treatment alerts get high priority
+    (paper Table IV, DD14).
 
     - an outcome with no matching active alert -> new alert (+ provenance row)
     - an outcome matching an active alert       -> kept; provenance appended if the
@@ -251,7 +254,7 @@ def apply_outcomes(
         for a in session.scalars(
             select(Alert).where(
                 Alert.patient_id == patient.id,
-                Alert.status == "active",
+                Alert.status.in_(OPEN_STATUSES),
                 Alert.kind.in_(("alert", "info_note")),
             )
         )
@@ -267,6 +270,7 @@ def apply_outcomes(
                 o.rule_id,
                 o.classification,
             ):
+                result.provenance_added += 1
                 session.add(
                     AlertProvenance(
                         alert_id=alert.id,
@@ -278,6 +282,7 @@ def apply_outcomes(
                 )
             result.kept.append(alert)
             continue
+        upgraded = o.patient_variant_id in reclassified_ids
         alert = Alert(
             patient_id=patient.id,
             patient_variant_id=o.patient_variant_id,
@@ -287,8 +292,8 @@ def apply_outcomes(
             kind=o.kind,
             severity=o.severity,
             message=o.message,
-            priority=priority if o.kind == "alert" else "normal",
-            reclassified=reclassified,
+            priority="high" if upgraded and o.kind == "alert" else "normal",
+            reclassified=upgraded,
             created_by_run_id=run_id,
         )
         session.add(alert)

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Patients{% endblock %}
+{% block content %}
+<div class="row" style="justify-content: space-between;">
+  <div><h1>Patients</h1><p class="muted small">{{ total }} patient{{ 's' if total != 1 }}</p></div>
+  <div class="row">
+    <form method="get" class="row">
+      <input type="search" name="q" value="{{ q }}" placeholder="Name or ID" aria-label="Search patients">
+      <button type="submit" class="secondary">Search</button>
+    </form>
+    {% if current_user.can_view_recommendations() %}<a class="button" href="{{ url_for('patients.new') }}">New patient</a>{% endif %}
+  </div>
+</div>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Name</th><th>ID</th><th>Family</th>{% if current_user.can_view_recommendations() %}<th>Unreviewed alerts</th>{% endif %}</tr></thead>
+  <tbody>
+  {% for p in patients %}
+    <tr>
+      <td><a href="{{ url_for('patients.detail', patient_id=p.id) }}">{{ p.name }}</a>{% if not p.is_active %} <span class="badge sev-info">inactive</span>{% endif %}</td>
+      <td><code>{{ p.external_id[:18] }}</code></td>
+      <td>{{ p.family_id or '' }}</td>
+      {% if current_user.can_view_recommendations() %}<td>{% if open_counts.get(p.id) %}<span class="badge sev-high">{{ open_counts[p.id] }}</span>{% endif %}</td>{% endif %}
+    </tr>
+  {% else %}
+    <tr><td colspan="4" class="muted">No patients{% if q %} match “{{ q }}”{% endif %}.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if pages > 1 %}
+<p class="small">Page {{ page }} of {{ pages }}
+  {% if page > 1 %}· <a href="{{ url_for('patients.index', q=q, page=page-1) }}">previous</a>{% endif %}
+  {% if page < pages %}· <a href="{{ url_for('patients.index', q=q, page=page+1) }}">next</a>{% endif %}</p>
+{% endif %}
+{% endblock %}

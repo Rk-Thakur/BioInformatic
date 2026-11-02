@@ -17,10 +17,12 @@ def test_health(client):
     assert resp.get_json() == {"status": "ok", "database": "ok"}
 
 
-def test_index_shows_advisory_banner(client):
+def test_index_redirects_to_login_and_shows_advisory_banner(client):
     resp = client.get("/")
-    assert resp.status_code == 200
-    assert b"advisory" in resp.data
+    assert resp.status_code == 302 and resp.headers["Location"].endswith("/login")
+    page = client.get("/login")
+    assert page.status_code == 200
+    assert b"advisory" in page.data
 
 
 def test_cli_commands_registered(runner):

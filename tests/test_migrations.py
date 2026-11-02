@@ -16,7 +16,7 @@ def test_upgrade_matches_models_and_downgrades(tmp_path):
         migrated = set(insp.get_table_names()) - {"alembic_version"}
         assert migrated == set(db.metadata.tables)
         partial = {i["name"] for i in insp.get_indexes("alert")}
-        assert "uq_alert_active" in partial
+        assert "uq_alert_open" in partial
         db.engine.dispose()
 
         downgrade(revision="base")

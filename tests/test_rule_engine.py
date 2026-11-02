@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import select
 
 from app.genes import load_genes
-from app.models import Alert, Medication, ReevaluationRun
+from app.models import Alert, Medication, PatientVariant, ReevaluationRun
 from app.services.knowledge_import import import_release, import_rules
 from app.services.rule_engine import (
     PREGNANCY_CAVEAT,
@@ -213,6 +213,10 @@ def upload(session, patient, tmp_path, records):
     )
 
 
+def p_variant_id(session, patient):
+    return session.scalar(select(PatientVariant.id).where(PatientVariant.patient_id == patient.id))
+
+
 def active_alerts(session, patient):
     return {
         (a.rule_code, a.kind)
@@ -267,8 +271,7 @@ def test_new_release_appends_provenance_and_switches_d6(session, tmp_path, kb):
         p,
         evaluate_patient(session, p, new, AS_OF),
         new,
-        priority="high",
-        reclassified=True,
+        reclassified_ids={p_variant_id(session, p)},
     )
     assert {a.rule_code for a in res.superseded} == {"D6"}
     d1 = next(a for a in res.created if a.rule_code == "D1")

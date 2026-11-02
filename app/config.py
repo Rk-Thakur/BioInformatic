@@ -13,6 +13,12 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     MAX_CONTENT_LENGTH = 20 * 1024 * 1024  # VCF upload limit (20 MB)
 
+    # Session security (plan §7). Production also sets SESSION_COOKIE_SECURE.
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    REMEMBER_COOKIE_HTTPONLY = True
+    PERMANENT_SESSION_LIFETIME = 8 * 60 * 60  # one working day, in seconds
+
     # Monogenic diabetes gene panel (paper §4.2).
     PANEL_GENES = ("GCK", "HNF1A", "HNF4A", "HNF1B", "KCNJ11", "ABCC8", "INS")
     # "Current therapy" is evaluated as of this date (plan §2a, C13).
@@ -35,6 +41,9 @@ class TestingConfig(Config):
 
 
 class ProductionConfig(Config):
+    SESSION_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SECURE = True
+
     @classmethod
     def validate(cls):
         if cls.SECRET_KEY == _DEV_SECRET:

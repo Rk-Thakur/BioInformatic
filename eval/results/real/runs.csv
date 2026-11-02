@@ -1,0 +1,16 @@
+scenario,strategy,repeat,step,ms,variants_changed,patients_reevaluated,records_examined,alerts_created,alerts_superseded
+real,alert_once,0,2026-10-19,44.61,40,0,0,0,0
+real,alert_once,1,2026-10-19,47.6,40,0,0,0,0
+real,alert_once,2,2026-10-19,45.42,40,0,0,0,0
+real,alert_once,3,2026-10-19,46.86,40,0,0,0,0
+real,alert_once,4,2026-10-19,94.63,40,0,0,0,0
+real,full,0,2026-10-19,422.57,40,33,17368,26,16
+real,full,1,2026-10-19,486.14,40,33,17368,26,16
+real,full,2,2026-10-19,492.56,40,33,17368,26,16
+real,full,3,2026-10-19,496.69,40,33,17368,26,16
+real,full,4,2026-10-19,487.71,40,33,17368,26,16
+real,change_driven,0,2026-10-19,330.86,40,23,12155,26,16
+real,change_driven,1,2026-10-19,387.39,40,23,12155,26,16
+real,change_driven,2,2026-10-19,386.23,40,23,12155,26,16
+real,change_driven,3,2026-10-19,330.89,40,23,12155,26,16
+real,change_driven,4,2026-10-19,387.39,40,23,12155,26,16

@@ -10,6 +10,9 @@ SEVERITIES = ("high", "medium", "low", "info")
 PRIORITIES = ("high", "normal")  # DD14: separate from severity
 ALERT_KINDS = ("alert", "info_note", "review_notice")
 ALERT_STATUSES = ("active", "superseded", "reviewed")
+# "Open" = still in force. A reviewed alert has been acknowledged by a clinician but its
+# advice still applies, so re-evaluation must neither duplicate nor forget it.
+OPEN_STATUSES = ("active", "reviewed")
 RUN_TRIGGERS = ("initial", "release", "rule", "medication", "upload")
 RUN_MODES = ("change_driven", "full", "alert_once")
 UPLOAD_STATUSES = ("accepted", "rejected")

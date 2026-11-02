@@ -1,0 +1,43 @@
+{% macro severity(s) -%}<span class="badge sev-{{ s }}">{{ s }}</span>{%- endmacro %}
+
+{% macro classification(c) -%}
+  {% set cls = {'P': 'sev-high', 'LP': 'sev-high', 'P/LP': 'sev-high', 'VUS': 'sev-medium',
+                'CONFLICT': 'sev-medium', 'LB': 'ok', 'B': 'ok', 'B/LB': 'ok'}.get(c, 'sev-info') %}
+  <span class="badge {{ cls }}">{{ c }}</span>
+{%- endmacro %}
+
+{% macro kind_label(a) -%}
+  {%- if a.kind == 'review_notice' -%}Review notice{%- elif a.kind == 'info_note' -%}Info note{%- else -%}Rule {{ a.rule_code }}{%- endif -%}
+{%- endmacro %}
+
+{% macro alert_card(a, action_form, back, show_patient=False) %}
+  <div class="card alert-card sev-border-{{ a.severity }}">
+    <div class="row" style="justify-content: space-between; align-items: center;">
+      <div>
+        <strong>{{ kind_label(a) }}</strong>
+        {{ severity(a.severity) }}
+        {% if a.priority == 'high' %}<span class="badge sev-high">high priority</span>{% endif %}
+        {% if a.reclassified %}<span class="badge sev-low">reclassified</span>{% endif %}
+        {% if a.status == 'reviewed' %}<span class="badge ok">reviewed</span>{% endif %}
+        {% if a.status == 'superseded' %}<span class="badge sev-info">superseded</span>{% endif %}
+      </div>
+      {% if a.status == 'active' and action_form %}
+        <form class="inline" method="post" action="{{ url_for('alerts.review', alert_id=a.id) }}">
+          {{ action_form.csrf_token }}<input type="hidden" name="back" value="{{ back }}">
+          <button type="submit" class="secondary">Mark reviewed</button>
+        </form>
+      {% endif %}
+    </div>
+    <p style="margin: 8px 0;">{{ a.message }}</p>
+    <div class="small muted">
+      {% if show_patient %}<a href="{{ url_for('patients.detail', patient_id=a.patient_id) }}">{{ a.patient.name }}</a> · {% endif %}
+      {% if a.patient_variant %}{{ a.patient_variant.gene }} {{ a.patient_variant.chrom }}:{{ a.patient_variant.pos }} {{ a.patient_variant.ref }}&gt;{{ a.patient_variant.alt }} · {% endif %}
+      created under ClinVar {{ a.release.version }}{% if a.rule %}, rule {{ a.rule.code }} v{{ a.rule.version }} · source {{ a.rule.source }}{% endif %}
+      · {{ a.created_at.strftime('%Y-%m-%d') }}
+      {% if a.provenance and a.provenance|length > 1 %}
+        · confirmed under: {% for pr in a.provenance %}ClinVar {{ pr.release.version }} ({{ pr.classification }}){{ ', ' if not loop.last }}{% endfor %}
+      {% endif %}
+      {% if a.reviewed_at %} · reviewed {{ a.reviewed_at.strftime('%Y-%m-%d') }}{% endif %}
+    </div>
+  </div>
+{% endmacro %}

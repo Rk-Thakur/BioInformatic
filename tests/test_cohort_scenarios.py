@@ -6,20 +6,19 @@ ask for are applied here: S2 also takes a sulfonylurea, S6 was diagnosed at 3 mo
 """
 
 import csv
-import datetime as dt
 
 import pytest
 from sqlalchemy import select
 
 from app.genes import load_genes
-from app.models import Alert, Diagnosis, Medication, Patient, PatientVariant
+from app.models import Alert, Patient, PatientVariant
 from app.services.knowledge_import import (
     import_curated_flags,
     import_expert_classifications,
     import_release,
     import_rules,
 )
-from app.services.workflow import process_upload
+from app.services.seed import seed_cohort
 from tests.factories import AS_OF, COHORT, CURATED, ROOT
 
 CLEAN = ROOT / "data" / "clean"
@@ -35,7 +34,7 @@ INSERTED = {r["patient_id"]: r for r in csv.DictReader(open(COHORT / "inserted_v
 
 
 def load_cohort(session, current):
-    """Import knowledge with `current` as the current release, then upload all 33 patients."""
+    """Import knowledge with `current` as the current release, then seed all 33 patients."""
     for f in sorted(CLEAN.glob("clinvar_*.panel.tsv")):
         import_release(
             session, f, make_current=f.name == f"clinvar_{current.replace('-', '')}.panel.tsv"
@@ -43,25 +42,10 @@ def load_cohort(session, current):
     import_expert_classifications(session, CLEAN / "erepo_classifications.tsv")
     import_rules(session, CURATED / "rules_v1.yaml")
     import_curated_flags(session, CURATED / "activating_variants.tsv")
-    genes = load_genes(CURATED / "panel_genes.tsv")
-
-    for row in SCENARIOS:
-        p = Patient(external_id=row["patient_id"], name=row["patient_id"][:8])
-        therapy = [] if row["current_therapy"] == "none" else row["current_therapy"].split(" + ")
-        if row["scenario"] == "S2":
-            therapy.append("sulfonylurea")
-        for cls in therapy:
-            p.medications.append(
-                Medication(description=cls, drug_class=cls, start=dt.date(2020, 1, 1))
-            )
-        years = 0.25 if row["scenario"] == "S6" else float(row["age_at_diagnosis"])
-        p.diagnoses.append(Diagnosis(diabetes_type="unknown", age_at_diagnosis_months=years * 12))
-        session.add(p)
-        session.flush()
-        up, _ = process_upload(
-            session, p, COHORT / "patients" / f"{p.external_id}.vcf.gz", genes, AS_OF
-        )
-        assert up.status == "accepted", up.error
+    created, _, rejected = seed_cohort(
+        session, COHORT, load_genes(CURATED / "panel_genes.tsv"), AS_OF
+    )
+    assert (created, rejected) == (33, 0)
     session.flush()
 
 

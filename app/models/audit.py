@@ -22,6 +22,8 @@ class ReevaluationRun(db.Model):
     finished_at: Mapped[datetime | None]
     variants_examined: Mapped[int] = mapped_column(default=0)
     variants_changed: Mapped[int] = mapped_column(default=0)
+    # patient-variant records run through Algorithm 1 (Table VI "records examined")
+    records_evaluated: Mapped[int] = mapped_column(default=0, server_default="0")
     patients_touched: Mapped[int] = mapped_column(default=0)
     alerts_created: Mapped[int] = mapped_column(default=0)
     alerts_superseded: Mapped[int] = mapped_column(default=0)
