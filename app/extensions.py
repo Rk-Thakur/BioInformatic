@@ -29,9 +29,10 @@ csrf = CSRFProtect()
 
 
 @login_manager.user_loader
-def _load_user(_user_id):
-    # Placeholder until the User model exists (Stage 1b); nobody can log in yet.
-    return None
+def _load_user(user_id):
+    from app.models import User
+
+    return db.session.get(User, int(user_id))
 
 
 @event.listens_for(Engine, "connect")

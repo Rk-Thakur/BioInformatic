@@ -19,6 +19,7 @@ pip install -e ".[dev]"
 
 ```bash
 python -m scripts.clean.run_all   # data/raw -> data/clean + data/clean/QUALITY_REPORT.md
+python -m scripts.curate_activating   # data/curated/activating_variants.tsv (rule D4)
 ```
 
 See [data/raw/README.md](data/raw/README.md) for where each raw file comes from.
@@ -27,6 +28,11 @@ See [data/raw/README.md](data/raw/README.md) for where each raw file comes from.
 
 ```bash
 flask db upgrade        # create or upgrade the database (instance/ge_ehr.db)
+flask load-knowledge    # load cleaned ClinVar releases, ClinGen, transcripts and rules v1
+flask import-flags data/curated/activating_variants.tsv   # activating KCNJ11/ABCC8 list (rule D4)
+flask list-knowledge    # show releases and rule versions (which one is current)
+flask kb-diff 2023-01-07 2026-10-19   # upgrades/downgrades between two releases
+flask create-user alice --role clinician   # roles: clinician, lab_tech, admin
 flask run               # http://127.0.0.1:5000  (health check: /health)
 flask show-config       # print the settings in use
 ```

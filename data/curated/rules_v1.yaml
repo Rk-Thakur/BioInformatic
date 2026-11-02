@@ -1,0 +1,73 @@
+# GE-EHR treatment rules, version 1 = paper Table III.
+# Schema and validation: app/services/rules.py. Recommendations are advisory only.
+#
+#   genes:     panel genes the rule applies to
+#   genetic:   classes = variant classifications that trigger it; flag = required curated flag
+#   therapy:   null = any therapy; any_of = at least one of these drug classes is current;
+#              none_of = none of these is current
+#   extra:     age_at_diagnosis_months_lt = diagnosis before this age
+#   If the genetic condition holds but therapy/extra does not, Algorithm 1 adds an info note.
+
+- code: D1
+  version: 1
+  genes: [GCK]
+  genetic: {classes: [P, LP, P/LP]}
+  therapy: {any_of: [insulin, metformin, sulfonylurea, other]}
+  severity: medium
+  recommendation: >-
+    Medication usually not required outside pregnancy; review whether it can be stopped.
+  source: "[1, 4]"
+  effective_from: 2021-01-01
+
+- code: D2
+  version: 1
+  genes: [HNF1A]
+  genetic: {classes: [P, LP, P/LP]}
+  therapy: {any_of: [insulin, metformin], none_of: [sulfonylurea]}
+  severity: high
+  recommendation: Consider low-dose sulfonylurea as first-line treatment.
+  source: "[1, 7]"
+  effective_from: 2021-01-01
+
+- code: D3
+  version: 1
+  genes: [HNF4A]
+  genetic: {classes: [P, LP, P/LP]}
+  therapy: {any_of: [insulin, metformin], none_of: [sulfonylurea]}
+  severity: medium
+  recommendation: >-
+    Consider low-dose sulfonylurea (supporting evidence is more limited than for HNF1A).
+  source: "[1, 7]"
+  effective_from: 2021-01-01
+
+- code: D4
+  version: 1
+  genes: [KCNJ11]
+  genetic: {classes: [P, LP, P/LP], flag: activating}
+  therapy: {any_of: [insulin]}
+  extra: {age_at_diagnosis_months_lt: 6}
+  severity: high
+  recommendation: Refer to specialist to consider transfer to high-dose sulfonylurea.
+  source: "[1]"
+  effective_from: 2021-01-01
+
+- code: D5
+  version: 1
+  genes: [GCK, HNF1A, HNF4A, HNF1B, KCNJ11, ABCC8, INS]
+  genetic: {classes: [P, LP, P/LP]}
+  therapy: null
+  severity: low
+  recommendation: >-
+    Offer genetic counselling and cascade testing of first-degree relatives (50% inheritance).
+  source: Autosomal dominant inheritance
+  effective_from: 2021-01-01
+
+- code: D6
+  version: 1
+  genes: [GCK, HNF1A, HNF4A]
+  genetic: {classes: [VUS]}
+  therapy: null
+  severity: info
+  recommendation: No treatment change; flag as monitored for reclassification.
+  source: "[5, 8]"
+  effective_from: 2021-01-01

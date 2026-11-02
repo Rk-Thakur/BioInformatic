@@ -1,0 +1,15 @@
+# Rule revision used in the evaluation (paper §5.1, scenario RS5):
+# D4 version 2 extends version 1 from KCNJ11 to ABCC8.
+# Importing this file stores D4 v2 as a pending version; it becomes current when the
+# re-evaluation engine applies the revision (Stage 3, Algorithm 3).
+
+- code: D4
+  version: 2
+  genes: [KCNJ11, ABCC8]
+  genetic: {classes: [P, LP, P/LP], flag: activating}
+  therapy: {any_of: [insulin]}
+  extra: {age_at_diagnosis_months_lt: 6}
+  severity: high
+  recommendation: Refer to specialist to consider transfer to high-dose sulfonylurea.
+  source: "[1]"
+  effective_from: 2026-01-01

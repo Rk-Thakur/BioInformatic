@@ -1,6 +1,6 @@
 # GE-EHR for Monogenic Diabetes — Development Plan
 
-Version 1.2 · 2026-10-29 (Stage 1a ClinVar/ClinGen cleaning done; C9 corrected) · Source of truth for scope: the paper *"GE-EHR for Monogenic Diabetes: Reclassification-Aware Genomic Decision Support in the EHR"* (Thakur, Thakuri, Awasthi).
+Version 1.4 · 2026-11-02 (Stage 2 F1–F3 done; patient loading waits for Synthea C12–C14) · Source of truth for scope: the paper *"GE-EHR for Monogenic Diabetes: Reclassification-Aware Genomic Decision Support in the EHR"* (Thakur, Thakuri, Awasthi).
 
 ---
 
@@ -107,6 +107,19 @@ The paper leaves these open. Decide them now and record them in the paper's Meth
 | DD14 | Table IV: an upgrade alert is "marked reclassified, **high priority**", but D3 has severity medium | Make **priority** a separate field from **severity**. Severity comes from the rule (Table III). Priority is `high` for any alert created by an upgrade and `normal` otherwise. The UI sorts by priority, then severity. |
 | DD15 | D1 says "medication usually not required **outside pregnancy**" (and §6.1 says pregnancy is out of scope) | If the patient has an active pregnancy condition (from Synthea), D1 still fires but adds the caveat "pregnancy: specialist guidance required". Treatment in pregnancy itself stays out of scope. |
 | DD16 | §4.2 names reference transcripts (NM_000162.5 GCK, NM_000545.6 HNF1A, NM_175914.4 HNF4A) | Keep a `GeneTranscript` table. Show transcript-level HGVS from ClinGen eRepo where it exists, and otherwise the genomic HGVS (`CLNHGVS`). FHIR Observations carry the transcript. |
+
+---
+
+### Decisions made during Stage 1b
+
+| # | Decision |
+|---|---|
+| DD17 | **Importing knowledge never changes what is current**, except the very first import. The first ClinVar release and each rule's first version become current. Later releases and rule versions are stored as *pending* and become current only when the re-evaluation engine applies them (Stage 3). This way, importing data can never silently change patients' alerts. |
+| DD18 | **Rule versions are immutable.** Re-importing an existing (code, version) with different content is an error. Fix a rule by adding a new version. |
+| DD19 | **Every import is one transaction plus an audit event.** A failed import leaves the database unchanged. |
+| DD20 | **"Activating" (D4) comes from ClinVar disease names for now.** A KCNJ11/ABCC8 P/LP variant is flagged activating when ClinVar links it to neonatal diabetes and not to hyperinsulinism (`scripts/curate_activating.py`, 54 variants). Variants linked to both are left out. Hand-curated rows can be added and survive re-runs. State this as a limitation in the paper. |
+| DD21 | **When an alert stops applying because therapy changed, it is superseded, not deleted**, and the new outcome (usually an info note) is created. Example: an HNF1A patient who starts a sulfonylurea has the D2 alert superseded and gets a D2 info note. |
+| DD22 | **Info notes explain themselves.** The note names the condition that failed ("already on sulfonylurea", "diagnosed at 552 months, rule applies below 6", "not on the curated activating list"). |
 
 ---
 
@@ -296,9 +309,9 @@ Rules are stored as data, for example in `rules_v1.yaml`:
 | Week | Milestone | Deliverables | Exit criteria |
 |---|---|---|---|
 | **0** (2 days) | Foundation | git repo, `pyproject.toml`, ruff + pre-commit, CI running pytest, app factory, config, Alembic | CI green on an empty test |
-| **1a** (3 days) | **Stage 1: Data cleaning** (§2a) | Tasks C1–C14; `data/clean/`; `data/clean/QUALITY_REPORT.md`; `tests/test_cleaning.py` | Every cleaning rule has a test; the report shows rows in, rows dropped per rule and rows out for every source; the raw files are untouched |
-| **1b** (2 days) | Data model and knowledge import | All models + migration; `flask import-release` and `flask import-expert` load the **cleaned** data; `flask import-rules rules_v1.yaml` | Both releases in the DB; a query gives about 192 upgrades and 75 downgrades (exact numbers recorded in the quality report) |
-| **2** | F1 + F2 + F3 | VCF upload and validation; classification; rule engine D1–D6; `flask seed` loads the v2 cohort including the S2/S6 fixes; activating variants CSV | **S1–S10 pass** as automated tests |
+| **1a** (3 days) | **Stage 1: Data cleaning** (§2a) 🟡 C1–C11 done, C12–C14 waiting for Synthea CSV | Tasks C1–C14; `data/clean/`; `data/clean/QUALITY_REPORT.md`; `tests/test_cleaning.py` | Every cleaning rule has a test; the report shows rows in, rows dropped per rule and rows out for every source; the raw files are untouched |
+| **1b** (2 days) | Data model and knowledge import ✅ Done 2026-11-02 | All models + migration; `flask import-release` and `flask import-expert` load the **cleaned** data; `flask import-rules rules_v1.yaml` | Both releases in the DB; a query gives about 192 upgrades and 75 downgrades (exact numbers recorded in the quality report) |
+| **2** | F1 + F2 + F3 🟡 F1–F3 done 2026-11-02; patient seeding waits for Synthea | VCF upload and validation; classification; rule engine D1–D6; `flask seed` loads the v2 cohort including the S2/S6 fixes; activating variants CSV | **S1–S10 pass** as automated tests |
 | **3** | F5 (core) | `reevaluate_release`, `reevaluate_rule`, idempotency, audit log, run log | **RS1–RS7 pass**; running twice changes nothing; results match `expected_changes.csv` 100% |
 | **4** | Web UI, security, F4 | Patient page, alert review, role checks, FHIR export | **S11, S12 pass**; clinician can walk through RS1 end to end in the browser |
 | **5** | Evaluation | 10k Synthea cohort; `eval/benchmark.py` for the 3 strategies; metrics; middle release (2023-12-30) as an extra step | Table VI filled with measured numbers; results CSV and plots committed |

@@ -109,7 +109,8 @@ def normalize_assertion(text):
 def expert_as_of(versions, as_of):
     """Latest expert-panel version approved on or before `as_of` (DD6, C9).
 
-    versions: iterable of objects/dicts with an ISO `approval_date`.
+    versions: iterable of objects/dicts with an `approval_date` (date or ISO string,
+    the same type as `as_of`).
     Returns None when no version had been approved by that date, so a 2026
     expert opinion never leaks into a 2023 ClinVar release.
     """
