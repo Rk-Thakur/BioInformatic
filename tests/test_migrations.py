@@ -20,4 +20,7 @@ def test_upgrade_matches_models_and_downgrades(tmp_path):
         db.engine.dispose()
 
         downgrade(revision="base")
-        assert set(inspect(create_engine(url)).get_table_names()) <= {"alembic_version"}
+        engine = create_engine(url)
+        assert set(inspect(engine).get_table_names()) <= {"alembic_version"}
+        engine.dispose()
+        db.engine.dispose()

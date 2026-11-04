@@ -5,8 +5,6 @@ until the Synthea tables are cleaned (C12-C14). The two hand edits the cohort no
 ask for are applied here: S2 also takes a sulfonylurea, S6 was diagnosed at 3 months.
 """
 
-import csv
-
 import pytest
 from sqlalchemy import select
 
@@ -19,7 +17,7 @@ from app.services.knowledge_import import (
     import_rules,
 )
 from app.services.seed import seed_cohort
-from tests.factories import AS_OF, COHORT, CURATED, ROOT
+from tests.factories import AS_OF, COHORT, CURATED, ROOT, read_csv
 
 CLEAN = ROOT / "data" / "clean"
 pytestmark = [
@@ -29,8 +27,8 @@ pytestmark = [
     ),
 ]
 
-SCENARIOS = list(csv.DictReader(open(COHORT / "scenarios.csv")))
-INSERTED = {r["patient_id"]: r for r in csv.DictReader(open(COHORT / "inserted_variants.csv"))}
+SCENARIOS = read_csv(COHORT / "scenarios.csv")
+INSERTED = {r["patient_id"]: r for r in read_csv(COHORT / "inserted_variants.csv")}
 
 
 def load_cohort(session, current):

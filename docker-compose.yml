@@ -1,0 +1,33 @@
+# GE-EHR: `docker compose up --build`, then open http://localhost:5000
+#
+# Read the demo password:
+#   docker compose exec web cat /app/instance/demo_accounts.txt
+# Run the evaluation (results appear in ./eval/results on your machine):
+#   docker compose run --rm web sh -c "python -m scripts.make_controlled_release && python -m eval.benchmark"
+# Run the tests:
+#   docker compose run --rm web pytest
+# Start again from an empty database:
+#   docker compose down -v
+
+services:
+  web:
+    build: .
+    image: ge-ehr:latest
+    ports:
+      - "5000:5000"
+    environment:
+      # Local http://localhost has no HTTPS, so cookies must not require it.
+      # Remove this line if you put the app behind HTTPS.
+      SESSION_COOKIE_SECURE: "0"
+      SEED_PATIENTS: "1"
+      # Start from ClinVar 2023-01-07 and re-evaluate to 2026-10-19, so the app shows
+      # reclassified alerts and review notices. Set to "" to stay on 2023-01-07.
+      REEVALUATE_TO: "2026-10-19"
+      # DEMO_PASSWORD: "choose-one"   # default: generated, see demo_accounts.txt
+    volumes:
+      - ge_ehr_instance:/app/instance   # database, secret key, demo accounts
+      - ./eval/results:/app/eval/results # benchmark output
+    restart: unless-stopped
+
+volumes:
+  ge_ehr_instance:

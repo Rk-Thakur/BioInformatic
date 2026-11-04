@@ -41,8 +41,10 @@ class TestingConfig(Config):
 
 
 class ProductionConfig(Config):
-    SESSION_COOKIE_SECURE = True
-    REMEMBER_COOKIE_SECURE = True
+    # Cookies only over HTTPS. Set SESSION_COOKIE_SECURE=0 to run on plain http://localhost
+    # (the Docker setup does this; never do it on a server reachable by others).
+    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "1") != "0"
+    REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
 
     @classmethod
     def validate(cls):

@@ -292,3 +292,13 @@ def test_patient_variant_in_view_uses_current_release(client, world, session):
     assert session.scalar(
         select(PatientVariant).where(PatientVariant.patient_id == world["fam1"].id)
     )
+
+
+def test_knowledge_page(client, world, session):
+    login(client, "clinician")
+    reevaluate_release(session, "2026-10-19", AS_OF)
+    session.commit()
+    page = client.get("/knowledge/").data
+    assert b"2023-01-07" in page and b"2026-10-19" in page and b"current" in page
+    assert b"D4</strong> v2" in page and b"pending / retired" in page  # v2 imported, not current
+    assert b"#" in page and b"release" in page  # the run log lists the re-evaluation

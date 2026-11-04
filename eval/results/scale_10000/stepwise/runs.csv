@@ -1,0 +1,13 @@
+scenario,strategy,repeat,step,ms,variants_changed,patients_reevaluated,records_examined,alerts_created,alerts_superseded
+stepwise,alert_once,0,2023-12-30,7887.68,25,0,0,0,0
+stepwise,alert_once,0,2026-10-19,10186.11,30,0,0,0,0
+stepwise,alert_once,1,2023-12-30,9078.98,25,0,0,0,0
+stepwise,alert_once,1,2026-10-19,9563.49,30,0,0,0,0
+stepwise,full,0,2023-12-30,89654.49,25,7301,3833690,2,8
+stepwise,full,0,2026-10-19,93720.8,30,7301,3833690,2,1018
+stepwise,full,1,2023-12-30,92311.58,25,7301,3833690,2,8
+stepwise,full,1,2026-10-19,88002.72,30,7301,3833690,2,1018
+stepwise,change_driven,0,2023-12-30,22393.31,25,18,8959,2,8
+stepwise,change_driven,0,2026-10-19,30196.14,30,1015,519953,2,1018
+stepwise,change_driven,1,2023-12-30,22829.63,25,18,8959,2,8
+stepwise,change_driven,1,2026-10-19,30264.64,30,1015,519953,2,1018

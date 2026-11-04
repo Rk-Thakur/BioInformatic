@@ -12,6 +12,7 @@ def app():
         yield app
         _db.session.remove()
         _db.drop_all()
+        _db.engine.dispose()  # close the SQLite connections (no ResourceWarning)
 
 
 @pytest.fixture()

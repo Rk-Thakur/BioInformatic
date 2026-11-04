@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="301" viewBox="0 0 720 301" role="img" aria-labelledby="t d" font-family='system-ui, -apple-system, "Segoe UI", sans-serif'>
+<title id="t">Time per knowledge change</title><desc id="d">10,000-patient cohort. Median of repeats; both strategies end in identical alerts; alert-once re-evaluates no one and leaves stale alerts.</desc>
+<rect width="720" height="301" fill="#fcfcfb"/>
+<text x="16" y="28" font-size="17" font-weight="600" fill="#0b0b0b">Time per knowledge change</text>
+<text x="16" y="48" font-size="12.5" fill="#52514e">10,000-patient cohort. Median of repeats; both strategies end in identical alerts; alert-once re-evaluates</text>
+<text x="16" y="65" font-size="12.5" fill="#52514e">no one and leaves stale alerts.</text>
+<rect x="190" y="75" width="10" height="10" rx="2" fill="#2a78d6"/>
+<text x="205" y="84" font-size="12" fill="#52514e">GE-EHR (change-driven)</text>
+<rect x="366" y="75" width="10" height="10" rx="2" fill="#eb6834"/>
+<text x="381" y="84" font-size="12" fill="#52514e">Full recompute</text>
+<line x1="190.0" x2="190.0" y1="89" y2="249" stroke="#c3c2b7" stroke-width="1"/>
+<text x="190.0" y="265" font-size="11.5" text-anchor="middle" fill="#898781" font-variant-numeric="tabular-nums">0</text>
+<line x1="292.5" x2="292.5" y1="89" y2="249" stroke="#e1e0d9" stroke-width="1"/>
+<text x="292.5" y="265" font-size="11.5" text-anchor="middle" fill="#898781" font-variant-numeric="tabular-nums">50</text>
+<line x1="395.0" x2="395.0" y1="89" y2="249" stroke="#e1e0d9" stroke-width="1"/>
+<text x="395.0" y="265" font-size="11.5" text-anchor="middle" fill="#898781" font-variant-numeric="tabular-nums">100</text>
+<line x1="497.5" x2="497.5" y1="89" y2="249" stroke="#e1e0d9" stroke-width="1"/>
+<text x="497.5" y="265" font-size="11.5" text-anchor="middle" fill="#898781" font-variant-numeric="tabular-nums">150</text>
+<line x1="600.0" x2="600.0" y1="89" y2="249" stroke="#e1e0d9" stroke-width="1"/>
+<text x="600.0" y="265" font-size="11.5" text-anchor="middle" fill="#898781" font-variant-numeric="tabular-nums">200</text>
+<text x="395.0" y="287" font-size="12" text-anchor="middle" fill="#52514e">Seconds (wall clock)</text>
+<text x="178" y="118.0" font-size="12.5" text-anchor="end" fill="#0b0b0b">ClinVar 2023 → 2026</text>
+<path d="M190.0,95.0 H246.8 Q250.8,95.0 250.8,99.0 V109.0 Q250.8,113.0 246.8,113.0 H190.0 Z" fill="#2a78d6"><title>GE-EHR (change-driven): 29.6 s</title></path>
+<text x="256.8" y="108.0" font-size="11.5" fill="#52514e" font-variant-numeric="tabular-nums">29.6 s</text>
+<path d="M190.0,115.0 H367.6 Q371.6,115.0 371.6,119.0 V129.0 Q371.6,133.0 367.6,133.0 H190.0 Z" fill="#eb6834"><title>Full recompute: 88.6 s</title></path>
+<text x="377.6" y="128.0" font-size="11.5" fill="#52514e" font-variant-numeric="tabular-nums">88.6 s</text>
+<text x="178" y="174.0" font-size="12.5" text-anchor="end" fill="#0b0b0b">2023 → 2023-12 → 2026</text>
+<path d="M190.0,151.0 H294.3 Q298.3,151.0 298.3,155.0 V165.0 Q298.3,169.0 294.3,169.0 H190.0 Z" fill="#2a78d6"><title>GE-EHR (change-driven): 52.8 s</title></path>
+<text x="304.3" y="164.0" font-size="11.5" fill="#52514e" font-variant-numeric="tabular-nums">52.8 s</text>
+<path d="M190.0,171.0 H558.8 Q562.8,171.0 562.8,175.0 V185.0 Q562.8,189.0 558.8,189.0 H190.0 Z" fill="#eb6834"><title>Full recompute: 181.8 s</title></path>
+<text x="568.8" y="184.0" font-size="11.5" fill="#52514e" font-variant-numeric="tabular-nums">181.8 s</text>
+<text x="178" y="230.0" font-size="12.5" text-anchor="end" fill="#0b0b0b">Rule D4 v1 → v2</text>
+<path d="M190.0,207.0 H193.7 Q197.7,207.0 197.7,211.0 V221.0 Q197.7,225.0 193.7,225.0 H190.0 Z" fill="#2a78d6"><title>GE-EHR (change-driven): 3.8 s</title></path>
+<text x="203.7" y="220.0" font-size="11.5" fill="#52514e" font-variant-numeric="tabular-nums">3.8 s</text>
+<path d="M190.0,227.0 H333.4 Q337.4,227.0 337.4,231.0 V241.0 Q337.4,245.0 333.4,245.0 H190.0 Z" fill="#eb6834"><title>Full recompute: 71.9 s</title></path>
+<text x="343.4" y="240.0" font-size="11.5" fill="#52514e" font-variant-numeric="tabular-nums">71.9 s</text>
+</svg>

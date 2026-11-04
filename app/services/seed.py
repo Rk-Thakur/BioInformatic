@@ -220,3 +220,151 @@ def _apply_overrides(patient, scen, as_of):
             patient.diagnoses.append(
                 Diagnosis(diabetes_type="unknown", age_at_diagnosis_months=months)
             )
+
+
+# --------------------------------------------------------------------------- scale cohort
+
+
+def seed_scale(session, scale_dir, genes, as_of, *, batch=20_000):
+    """Bulk-load a derived scale cohort (scripts/make_scale_cohort.py, DD37).
+
+    Rows are inserted in batches rather than through one VCF upload per patient, because
+    10,000 uploads would dominate the benchmark's setup time. Variants come from the
+    cohort's real 1000 Genomes backgrounds plus each carrier's inserted ClinVar SNV. The
+    initial alerts are then computed with the normal rule engine (Algorithm 1) under one
+    ReevaluationRun (trigger "initial"). Returns the number of patients loaded.
+    """
+    from sqlalchemy import insert
+
+    from app.models import Condition, PatientVariant, ReevaluationRun
+    from app.models.base import utcnow
+    from app.services.knowledge_import import current_release
+    from app.services.rule_engine import apply_outcomes, current_rules, evaluate_patient
+    from app.services.workflow import NoCurrentReleaseError
+
+    scale_dir = Path(scale_dir)
+    release = current_release(session)
+    if release is None:
+        raise NoCurrentReleaseError("no current ClinVar release; run `flask load-knowledge` first")
+    if session.scalar(select(Patient).limit(1)) is not None:
+        raise ValueError("seed_scale expects an empty patient table")
+
+    pats = _read_csv(scale_dir / "patients.csv")
+    session.execute(
+        insert(Patient),
+        [
+            {
+                "external_id": p["patient_id"],
+                "name": f"Scale {p['patient_id'][:8]}",
+                "sex": p["sex"] or None,
+                "birth_date": _date(p["birth_date"]),
+                "deceased_date": _date(p["death_date"]),
+                "is_active": p["is_active"] == "1",
+                "family_id": p["family_id"] or None,
+            }
+            for p in pats
+        ],
+    )
+    ids = {ext: pid for ext, pid in session.execute(select(Patient.external_id, Patient.id))}
+
+    def bulk(model, rows):
+        for i in range(0, len(rows), batch):
+            session.execute(insert(model), rows[i : i + batch])
+
+    bulk(
+        Diagnosis,
+        [
+            {
+                "patient_id": ids[d["patient_id"]],
+                "diabetes_type": d["diabetes_type"],
+                "diagnosed_on": _date(d["diagnosed_on"]),
+                "age_at_diagnosis_months": float(d["age_at_diagnosis_months"])
+                if d["age_at_diagnosis_months"]
+                else None,
+            }
+            for d in _read_csv(scale_dir / "diagnoses.csv")
+        ],
+    )
+    bulk(
+        Medication,
+        [
+            {
+                "patient_id": ids[m["patient_id"]],
+                "rxnorm_code": m["rxnorm_code"] or None,
+                "description": m["description"][:300],
+                "drug_class": m["drug_class"],
+                "start": _date(m["start"]),
+                "stop": _date(m["stop"]),
+            }
+            for m in _read_csv(scale_dir / "medications.csv")
+        ],
+    )
+    bulk(
+        Condition,
+        [
+            {
+                "patient_id": ids[c["patient_id"]],
+                "code": c["code"],
+                "description": c["description"][:300],
+                "category": c["category"],
+                "start": _date(c["start"]),
+                "stop": _date(c["stop"]),
+            }
+            for c in _read_csv(scale_dir / "conditions.csv")
+        ],
+    )
+
+    from app.genes import gene_at
+
+    backgrounds = {}
+    with open(scale_dir / "backgrounds.tsv", newline="") as fh:
+        for r in csv.DictReader(fh, delimiter="\t"):
+            gene = gene_at(r["chrom"], int(r["pos"]), genes)
+            if gene:
+                backgrounds.setdefault(r["sample"], []).append(
+                    (r["chrom"], int(r["pos"]), r["ref"], r["alt"], r["zygosity"], gene)
+                )
+    carriers = {c["patient_id"]: c for c in _read_csv(scale_dir / "carriers.csv")}
+    rows = []
+    for p in pats:
+        pid = ids[p["patient_id"]]
+        recs = backgrounds.get(p["background_sample"], [])
+        c = carriers.get(p["patient_id"])
+        if c:
+            key = (c["chrom"], int(c["pos"]))
+            recs = [r for r in recs if r[:2] != key] + [
+                (c["chrom"], int(c["pos"]), c["ref"], c["alt"], "heterozygous", c["gene"])
+            ]
+        rows += [
+            {
+                "patient_id": pid,
+                "chrom": ch,
+                "pos": pos,
+                "ref": ref,
+                "alt": alt,
+                "zygosity": zyg,
+                "gene": gene,
+            }
+            for ch, pos, ref, alt, zyg, gene in recs
+        ]
+        if len(rows) >= batch:
+            session.execute(insert(PatientVariant), rows)
+            rows = []
+    if rows:
+        session.execute(insert(PatientVariant), rows)
+
+    run = ReevaluationRun(trigger="initial", mode="full", new_ref=release.version)
+    session.add(run)
+    session.flush()
+    rules = current_rules(session)
+    created = 0
+    for patient in session.scalars(select(Patient).where(Patient.is_active)):
+        outcomes = evaluate_patient(session, patient, release, as_of, rules=rules)
+        if outcomes:
+            created += len(apply_outcomes(session, patient, outcomes, release, run=run).created)
+        session.expunge(patient)  # keep the identity map small
+    run.patients_touched = len(pats)
+    run.alerts_created = created
+    run.finished_at = utcnow()
+    session.flush()
+    return len(pats)

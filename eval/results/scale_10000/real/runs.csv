@@ -1,0 +1,7 @@
+scenario,strategy,repeat,step,ms,variants_changed,patients_reevaluated,records_examined,alerts_created,alerts_superseded
+real,alert_once,0,2026-10-19,8980.59,51,0,0,0,0
+real,alert_once,1,2026-10-19,9787.81,51,0,0,0,0
+real,full,0,2026-10-19,88085.9,51,7301,3833690,4,1026
+real,full,1,2026-10-19,89070.58,51,7301,3833690,4,1026
+real,change_driven,0,2026-10-19,29468.46,51,1031,527888,4,1026
+real,change_driven,1,2026-10-19,29830.29,51,1031,527888,4,1026

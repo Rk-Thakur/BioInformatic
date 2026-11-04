@@ -16,7 +16,7 @@ from app.services.knowledge_import import (
 )
 from app.services.reevaluate import active_alert_state, reevaluate_release
 from app.services.seed import seed_synthea
-from tests.factories import AS_OF, COHORT, CURATED, ROOT, write_release
+from tests.factories import AS_OF, COHORT, CURATED, ROOT, read_csv, write_release
 from tests.test_cohort_reevaluation import in_fresh_db
 from tests.test_cohort_scenarios import EXPECTED_2026, INSERTED, SCENARIOS
 
@@ -113,7 +113,7 @@ def test_seed_synthea_small(session, tmp_path):
         ],
     )
 
-    ins = {r["patient_id"]: r for r in csv.DictReader(open(COHORT / "inserted_variants.csv"))}
+    ins = {r["patient_id"]: r for r in read_csv(COHORT / "inserted_variants.csv")}
     import_rules(session, CURATED / "rules_v1.yaml")
     import_release(
         session,

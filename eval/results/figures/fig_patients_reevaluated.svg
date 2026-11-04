@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="301" viewBox="0 0 720 301" role="img" aria-labelledby="t d" font-family='system-ui, -apple-system, "Segoe UI", sans-serif'>
+<title id="t">Patients re-evaluated per knowledge change</title><desc id="d">10,000-patient cohort. Both strategies end in identical alerts; alert-once re-evaluates no one and leaves stale alerts.</desc>
+<rect width="720" height="301" fill="#fcfcfb"/>
+<text x="16" y="28" font-size="17" font-weight="600" fill="#0b0b0b">Patients re-evaluated per knowledge change</text>
+<text x="16" y="48" font-size="12.5" fill="#52514e">10,000-patient cohort. Both strategies end in identical alerts; alert-once re-evaluates no one and leaves</text>
+<text x="16" y="65" font-size="12.5" fill="#52514e">stale alerts.</text>
+<rect x="190" y="75" width="10" height="10" rx="2" fill="#2a78d6"/>
+<text x="205" y="84" font-size="12" fill="#52514e">GE-EHR (change-driven)</text>
+<rect x="366" y="75" width="10" height="10" rx="2" fill="#eb6834"/>
+<text x="381" y="84" font-size="12" fill="#52514e">Full recompute</text>
+<line x1="190.0" x2="190.0" y1="89" y2="249" stroke="#c3c2b7" stroke-width="1"/>
+<text x="190.0" y="265" font-size="11.5" text-anchor="middle" fill="#898781" font-variant-numeric="tabular-nums">0</text>
+<line x1="326.7" x2="326.7" y1="89" y2="249" stroke="#e1e0d9" stroke-width="1"/>
+<text x="326.7" y="265" font-size="11.5" text-anchor="middle" fill="#898781" font-variant-numeric="tabular-nums">5K</text>
+<line x1="463.3" x2="463.3" y1="89" y2="249" stroke="#e1e0d9" stroke-width="1"/>
+<text x="463.3" y="265" font-size="11.5" text-anchor="middle" fill="#898781" font-variant-numeric="tabular-nums">10K</text>
+<line x1="600.0" x2="600.0" y1="89" y2="249" stroke="#e1e0d9" stroke-width="1"/>
+<text x="600.0" y="265" font-size="11.5" text-anchor="middle" fill="#898781" font-variant-numeric="tabular-nums">15K</text>
+<text x="395.0" y="287" font-size="12" text-anchor="middle" fill="#52514e">Patients re-evaluated</text>
+<text x="178" y="118.0" font-size="12.5" text-anchor="end" fill="#0b0b0b">ClinVar 2023 → 2026</text>
+<path d="M190.0,95.0 H214.2 Q218.2,95.0 218.2,99.0 V109.0 Q218.2,113.0 214.2,113.0 H190.0 Z" fill="#2a78d6"><title>GE-EHR (change-driven): 1,031</title></path>
+<text x="224.2" y="108.0" font-size="11.5" fill="#52514e" font-variant-numeric="tabular-nums">1,031</text>
+<path d="M190.0,115.0 H385.6 Q389.6,115.0 389.6,119.0 V129.0 Q389.6,133.0 385.6,133.0 H190.0 Z" fill="#eb6834"><title>Full recompute: 7,301</title></path>
+<text x="395.6" y="128.0" font-size="11.5" fill="#52514e" font-variant-numeric="tabular-nums">7,301</text>
+<text x="178" y="174.0" font-size="12.5" text-anchor="end" fill="#0b0b0b">2023 → 2023-12 → 2026</text>
+<path d="M190.0,151.0 H214.2 Q218.2,151.0 218.2,155.0 V165.0 Q218.2,169.0 214.2,169.0 H190.0 Z" fill="#2a78d6"><title>GE-EHR (change-driven): 1,033</title></path>
+<text x="224.2" y="164.0" font-size="11.5" fill="#52514e" font-variant-numeric="tabular-nums">1,033</text>
+<path d="M190.0,171.0 H585.1 Q589.1,171.0 589.1,175.0 V185.0 Q589.1,189.0 585.1,189.0 H190.0 Z" fill="#eb6834"><title>Full recompute: 14,602</title></path>
+<text x="595.1" y="184.0" font-size="11.5" fill="#52514e" font-variant-numeric="tabular-nums">14,602</text>
+<text x="178" y="230.0" font-size="12.5" text-anchor="end" fill="#0b0b0b">Rule D4 v1 → v2</text>
+<path d="M190.0,207.0 H190.0 Q190.5,207.0 190.5,207.5 V224.5 Q190.5,225.0 190.0,225.0 H190.0 Z" fill="#2a78d6"><title>GE-EHR (change-driven): 20</title></path>
+<text x="196.5" y="220.0" font-size="11.5" fill="#52514e" font-variant-numeric="tabular-nums">20</text>
+<path d="M190.0,227.0 H385.6 Q389.6,227.0 389.6,231.0 V241.0 Q389.6,245.0 385.6,245.0 H190.0 Z" fill="#eb6834"><title>Full recompute: 7,301</title></path>
+<text x="395.6" y="240.0" font-size="11.5" fill="#52514e" font-variant-numeric="tabular-nums">7,301</text>
+</svg>

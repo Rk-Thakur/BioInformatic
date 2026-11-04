@@ -59,8 +59,9 @@ def pct(a, b):
     return f"{100 * a / b:.1f}%" if b else "–"
 
 
-def main():
-    files = sorted(CLEAN.glob("clinvar_*.panel.tsv"))
+def main(clean=CLEAN, out=OUT):
+    clean, out = Path(clean), Path(out)
+    files = sorted(clean.glob("clinvar_*.panel.tsv"))
     if len(files) < 2:
         raise SystemExit("need at least two cleaned releases in data/clean")
     releases = [(f.stem.split("_")[1].split(".")[0], read(f)) for f in files]
@@ -68,7 +69,7 @@ def main():
     if (releases[0], releases[-1]) not in pairs:
         pairs.append((releases[0], releases[-1]))
 
-    OUT.mkdir(parents=True, exist_ok=True)
+    out.mkdir(parents=True, exist_ok=True)
     rows = []
     md = [
         "# ClinVar reclassification per gene",
@@ -95,12 +96,13 @@ def main():
             md.append(_line(g, c))
         md.append(_line("**All**", total))
         md.append("")
-    with open(OUT / "reclassification.csv", "w", newline="") as fh:
+    with open(out / "reclassification.csv", "w", newline="") as fh:
         w = csv.DictWriter(fh, list(rows[0]), lineterminator="\n")
         w.writeheader()
         w.writerows(rows)
-    (OUT / "reclassification.md").write_text("\n".join(md))
-    print(f"Wrote {OUT / 'reclassification.md'}")
+    (out / "reclassification.md").write_text("\n".join(md))
+    print(f"Wrote {out / 'reclassification.md'}")
+    return rows
 
 
 def _line(name, c):

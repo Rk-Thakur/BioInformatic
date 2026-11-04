@@ -28,6 +28,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+server = [
+    "gunicorn>=22.0",
+]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
@@ -63,3 +66,5 @@ known-first-party = ["app", "scripts", "eval"]
 [tool.ruff.lint.per-file-ignores]
 # Test fixtures hold literal VCF/eRepo lines; wrapping them hurts readability.
 "tests/*" = ["E501"]
+# SVG markup templates read better unwrapped.
+"eval/figures.py" = ["E501"]

@@ -1,0 +1,7 @@
+scenario,strategy,repeat,step,ms,variants_changed,patients_reevaluated,records_examined,alerts_created,alerts_superseded
+rule_revision,alert_once,0,D4 v2,6.17,0,0,0,0,0
+rule_revision,alert_once,1,D4 v2,7.59,0,0,0,0,0
+rule_revision,full,0,D4 v2,71530.4,0,7301,3833690,16,0
+rule_revision,full,1,D4 v2,72227.47,0,7301,3833690,16,0
+rule_revision,change_driven,0,D4 v2,3801.35,0,20,10636,16,0
+rule_revision,change_driven,1,D4 v2,3756.83,0,20,10636,16,0

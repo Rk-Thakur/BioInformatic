@@ -5,7 +5,42 @@ classifies them against versioned ClinVar releases, applies medication-aware tre
 re-evaluates stored patients when ClinVar or the rules change.
 
 Research prototype: synthetic data only, and the recommendations are advisory.
-See [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) for the design and the stages.
+
+| Document | What it is |
+|---|---|
+| [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | Design, stages and all design decisions (DD1–DD38) |
+| [docs/DEMO.md](docs/DEMO.md) | 10-minute demo script, scenario by scenario |
+| [docs/PAPER_UPDATES.md](docs/PAPER_UPDATES.md) | Draft paper text with the measured results, and fixes to the draft |
+| [eval/results/](eval/results/) | Benchmark output (Table VI), reclassification analysis, figures |
+| [data/clean/QUALITY_REPORT.md](data/clean/QUALITY_REPORT.md) | Row counts for every data-cleaning rule |
+
+## Run with Docker (everything in one image)
+
+Needs Docker Desktop running. The image installs all dependencies, runs the Stage 1a
+cleaning on `data/raw/` during the build, and on first start loads the knowledge and the
+patients, re-evaluates them to ClinVar 2026-10-19 and creates demo accounts.
+
+```bash
+docker compose up --build
+```
+
+Then open http://localhost:5000. The first build takes a few minutes, and the first start
+about one more while the data loads. Log in as `demo_clinician`, `demo_lab_tech` or `demo_admin`:
+
+```bash
+docker compose exec web cat /app/instance/demo_accounts.txt
+```
+
+```bash
+docker compose run --rm web sh -c "python -m scripts.make_controlled_release && python -m eval.benchmark"
+```
+
+```bash
+docker compose run --rm web pytest
+```
+
+`docker compose down -v` deletes the database volume so the next start loads everything again.
+Settings (`SEED_PATIENTS`, `REEVALUATE_TO`, `DEMO_PASSWORD`) are in `docker-compose.yml`.
 
 ## Setup
 
@@ -47,8 +82,10 @@ flask show-config       # print the settings in use
 ```bash
 python -m scripts.make_controlled_release   # eval/controlled/: release with 23 known injected changes
 python -m eval.benchmark                    # alert-once vs full vs change-driven -> eval/results/SUMMARY.md
-python -m eval.benchmark --replicate 10     # larger (replicated) cohort for timing
+python -m scripts.make_scale_cohort --n 10000             # derived 10,000-patient cohort (DD37)
+python -m eval.benchmark --scale 10000 --repeats 2 --out eval/results/scale_10000   # ~30 min
 python -m eval.reclassification             # per-gene ClinVar reclassification rates
+python -m eval.figures                      # paper figures (SVG) -> eval/results/figures/
 ```
 
 ## Test and lint

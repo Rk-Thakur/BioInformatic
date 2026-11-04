@@ -1,0 +1,22 @@
+# Keep the build context to what the image needs. data/raw IS needed: the build stage
+# runs the cleaning pipeline on it (it does not end up in the final image).
+.git
+.github
+.venv
+.claude
+.pytest_cache
+.ruff_cache
+**/__pycache__
+**/*.pyc
+*.egg-info
+.DS_Store
+**/.DS_Store
+
+instance/
+data/archive/
+data/clean/
+data/synthetic/
+eval/controlled/
+eval/results/
+files/
+docs/paper/

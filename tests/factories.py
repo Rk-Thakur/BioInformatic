@@ -33,6 +33,14 @@ RELEASE_COLUMNS = [
 ]
 
 
+def read_csv(path, delimiter=","):
+    """Rows of a CSV/TSV (skipping '#' comment lines), with the file closed afterwards."""
+    with open(path, newline="") as fh:
+        return list(
+            csv.DictReader((ln for ln in fh if not ln.startswith("#")), delimiter=delimiter)
+        )
+
+
 def write_release(path, date, records):
     """records: (chrom, pos, ref, alt, gene, classification[, clinvar_id]) tuples."""
     with open(path, "w", newline="") as fh:

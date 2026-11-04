@@ -1,6 +1,5 @@
 """Stage 5: the evaluation metrics and the controlled-release generator."""
 
-import csv
 import gzip
 
 import pytest
@@ -10,7 +9,7 @@ from app.models import KbRelease
 from app.services.reevaluate import active_alert_state, reevaluate_release, release_changes
 from eval import metrics
 from scripts.make_controlled_release import make
-from tests.factories import AS_OF, write_release
+from tests.factories import AS_OF, read_csv, write_release
 from tests.test_reevaluate import build
 
 
@@ -103,12 +102,7 @@ def test_controlled_release_generator(tmp_path):
     assert release.name == "clinvar_20230630.panel.tsv"
     assert {r["category"] for r in injected} == set(plan)
     assert "7" not in {r["clinvar_id"] for r in injected}
-    rows = {
-        r["clinvar_id"]: r
-        for r in csv.DictReader(
-            (ln for ln in open(release) if not ln.startswith("#")), delimiter="\t"
-        )
-    }
+    rows = {r["clinvar_id"]: r for r in read_csv(release, delimiter="\t")}
     for r in injected:
         assert rows[r["clinvar_id"]]["classification"] == r["new_class"]
     again = make(base, "2023-06-30", cohort, erepo, tmp_path / "out2", plan=plan)[2]
