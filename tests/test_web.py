@@ -55,7 +55,8 @@ def test_pages_require_login(client, users):
 
 def test_login_logout(client, users, session):
     resp = login(client, "clinician")
-    assert resp.status_code == 302 and resp.headers["Location"].endswith("/patients/")
+    assert resp.status_code == 302 and resp.headers["Location"] == "/"
+    assert client.get("/").headers["Location"].endswith("/overview")  # clinicians land on Overview
     assert client.get("/patients/").status_code == 200
     client.post("/logout")
     assert client.get("/patients/").status_code == 302
@@ -75,13 +76,13 @@ def test_failed_login_same_message(client, users, username, password):
     "target, expected",
     [
         ("/alerts/", "/alerts/"),
-        ("https://evil.example/", "/patients/"),
-        ("//evil.example", "/patients/"),
+        ("https://evil.example/", "/"),
+        ("//evil.example", "/"),
     ],
 )
 def test_login_redirect_is_never_off_site(client, users, target, expected):
     resp = login(client, "clinician", next_url=target)
-    assert resp.headers["Location"].endswith(expected)
+    assert resp.headers["Location"] == expected  # exact: never an off-site URL
 
 
 # ------------------------------------------------------------------ S12 role matrix
@@ -302,3 +303,64 @@ def test_knowledge_page(client, world, session):
     assert b"2023-01-07" in page and b"2026-10-19" in page and b"current" in page
     assert b"D4</strong> v2" in page and b"pending / retired" in page  # v2 imported, not current
     assert b"#" in page and b"release" in page  # the run log lists the re-evaluation
+
+
+def test_overview_page(client, world, session):
+    """Clinician dashboard: counts and the latest re-evaluation flow; lab techs are redirected."""
+    login(client, "clinician")
+    reevaluate_release(session, "2026-10-19", AS_OF)
+    session.commit()
+    page = client.get("/overview").data
+    assert b"Latest re-evaluation" in page and b"stored variants checked" in page
+    assert b"Waiting for review" in page and b"2026-10-19" in page
+    assert b"High priority" in page and b"reclassified" in page
+    client.post("/logout")
+    login(client, "lab_tech")
+    assert client.get("/").headers["Location"].endswith("/patients/")
+    assert client.get("/overview").status_code == 403
+
+
+def test_static_assets_served(client):
+    for path in ("/assets/css/app.css", "/assets/js/app.js", "/assets/js/theme.js"):
+        resp = client.get(path)
+        assert resp.status_code == 200, path
+        resp.close()  # static files are streamed
+
+
+# ------------------------------------------------------------------ demo-mode quick login
+
+
+@pytest.fixture()
+def demo_users(session, users):
+    for role in ("clinician", "lab_tech"):
+        u = User(username=f"demo_{role}", role=role)
+        u.set_password("not-used-by-quick-login")
+        session.add(u)
+    session.commit()
+
+
+def test_demo_login_off_by_default(client, app, demo_users):
+    assert not app.config["DEMO_LOGIN"]  # testing/production default
+    assert b"or try a demo account" not in client.get("/login").data
+    assert client.post("/login/demo", data={"username": "demo_clinician"}).status_code == 404
+
+
+def test_demo_login_dropdown_and_one_click(client, app, demo_users, session):
+    app.config["DEMO_LOGIN"] = True
+    page = client.get("/login").data
+    assert b"or try a demo account" in page
+    assert b'value="demo_clinician"' in page and b'value="demo_lab_tech"' in page
+    assert b'value="clinician"' not in page  # real accounts are never listed
+    assert b"not-used-by-quick-login" not in page  # no password is ever shown
+
+    resp = client.post("/login/demo", data={"username": "demo_clinician"})
+    assert resp.status_code == 302
+    assert client.get("/").headers["Location"].endswith("/overview")
+    assert "demo_login" in [e.action for e in session.scalars(select(AuditEvent))]
+
+
+def test_demo_login_refuses_real_accounts(client, app, demo_users):
+    app.config["DEMO_LOGIN"] = True
+    assert client.post("/login/demo", data={"username": "clinician"}).status_code == 403
+    assert client.post("/login/demo", data={"username": "admin"}).status_code == 403
+    assert client.get("/patients/").status_code == 302  # still logged out

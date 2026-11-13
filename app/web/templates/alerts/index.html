@@ -1,13 +1,42 @@
 {% extends "base.html" %}
-{% from "macros.html" import alert_card %}
+{% from "icons.html" import icon %}
+{% from "macros.html" import alert_event %}
 {% block title %}Alerts{% endblock %}
 {% block content %}
-<h1>Alerts to review</h1>
-<p class="muted small">{{ alerts|length }} unreviewed · high priority first ·
-  {% if show_info %}<a href="{{ url_for('alerts.index') }}">hide info-level alerts</a>{% else %}<a href="{{ url_for('alerts.index', info=1) }}">include info-level alerts</a>{% endif %}</p>
-{% for a in alerts %}
-  {{ alert_card(a, action_form, request.full_path, show_patient=True) }}
-{% else %}
-  <p class="muted">Nothing to review.</p>
-{% endfor %}
+{% set high = alerts|selectattr('priority', 'equalto', 'high')|list %}
+{% set rest = alerts|rejectattr('priority', 'equalto', 'high')|list %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow reveal">Worklist</div>
+    <h1 class="reveal" style="--i: 1">Alerts to review</h1>
+    <p class="lede reveal" style="--i: 2">{{ alerts|length }} unreviewed · {{ high|length }} high priority. Reviewing an alert
+      acknowledges it; its advice stays in force until the knowledge changes.</p>
+  </div>
+  <div class="chipbar reveal" style="--i: 3" role="group" aria-label="Show">
+    <a class="chip" aria-pressed="{{ 'false' if show_info else 'true' }}" href="{{ url_for('alerts.index') }}">Treatment &amp; review</a>
+    <a class="chip" aria-pressed="{{ 'true' if show_info else 'false' }}" href="{{ url_for('alerts.index', info=1) }}">Include info-level</a>
+  </div>
+</div>
+
+{% if not alerts %}
+  <div class="card reveal" style="text-align: center; padding: 48px">
+    <div style="display: inline-grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--ok-bg); color: var(--ok)">{{ icon('check') }}</div>
+    <h2 style="margin-top: 14px">Nothing to review</h2>
+    <p class="muted">New reclassifications and review notices will appear here.</p>
+  </div>
+{% endif %}
+
+{% if high %}
+<section>
+  <div class="section-head"><h2>High priority</h2><span class="muted small">reclassified results and review notices</span></div>
+  <div class="timeline">{% for a in high %}{{ alert_event(a, action_form, request.full_path, show_patient=True, i=loop.index) }}{% endfor %}</div>
+</section>
+{% endif %}
+
+{% if rest %}
+<section class="section">
+  <div class="section-head"><h2>Other alerts</h2></div>
+  <div class="timeline">{% for a in rest %}{{ alert_event(a, action_form, request.full_path, show_patient=True, i=loop.index) }}{% endfor %}</div>
+</section>
+{% endif %}
 {% endblock %}

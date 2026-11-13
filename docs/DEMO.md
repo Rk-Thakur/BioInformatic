@@ -14,12 +14,15 @@ docker compose up --build
 docker compose exec web cat /app/instance/demo_accounts.txt
 ```
 
-Open http://localhost:5000. On first start the container loads ClinVar 2023-01-07, the
+Open http://localhost:5000. Visitors first see the **home page**, which explains the problem, how
+GE-EHR works and the measured results, with a **Log in** button at the top. On first start the container loads ClinVar 2023-01-07, the
 Synthea patients and their VCFs, then re-evaluates everyone to ClinVar 2026-10-19, so the
 app opens in the "after a new ClinVar release" state. Without Docker, run `flask run` with
 the database built as in the README.
 
 ## 1. Lab technician: upload, but no recommendations (S10, S12)
+
+Tip: on the login page, **"or try a demo account"** logs you in with one click (demo mode).
 
 1. Log in as **demo_lab_tech**.
 2. Open any patient, for example `0661fbba`. Variants and classifications are visible;
@@ -30,7 +33,10 @@ the database built as in the README.
 
 ## 2. Clinician: medication-aware alerts (S1, S2, S4)
 
-Log in as **demo_clinician**.
+Log in as **demo_clinician**. You land on the **Overview**: items waiting for review, the
+latest re-evaluation as a flow (1,458 variants checked → 40 changed → 23 patients → 26 new
+alerts), the high-priority timeline and the advice in force per rule. The moon button switches
+light and dark.
 
 - `0661fbba (S1)`: HNF1A pathogenic, on insulin. **Rule D2, high**: consider low-dose
   sulfonylurea. **Rule D5, low**: cascade testing of relatives.

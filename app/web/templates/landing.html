@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% from "icons.html" import icon %}
+{% block title %}Reclassification-aware genomic decision support{% endblock %}
+{% block body %}
+<main class="landing">
+
+  {# ---------------------------------------------------------------- hero #}
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <div class="eyebrow reveal">Monogenic diabetes · Genomic-Enhanced EHR</div>
+        <h1 class="reveal" style="--i: 1">When the science changes, the doctor hears about it.</h1>
+        <p class="lede reveal" style="--i: 2">GE-EHR stores each patient's genetic test results, checks them against the latest
+          ClinVar knowledge, and tells the clinician when a reclassified variant means a different treatment.
+          For example, tablets instead of insulin injections.</p>
+        <div class="row reveal" style="--i: 3; margin-top: 26px">
+          <a class="btn accent lg" href="{{ url_for('auth.login') }}">Log in {{ icon('arrow') }}</a>
+          <a class="btn ghost lg" href="#how">How it works</a>
+        </div>
+        <div class="hero-facts reveal" style="--i: 4">
+          <span>{{ icon('dna') }}7 diabetes genes</span>
+          <span>{{ icon('layers') }}Versioned ClinVar knowledge</span>
+          <span>{{ icon('shield') }}Advisory only, never changes therapy</span>
+        </div>
+      </div>
+      <div class="hero-art reveal" style="--i: 2" aria-hidden="true">
+        <div class="helix big">
+          {% for i in range(14) %}<div class="rung" style="--i: {{ i }}"><span class="a"></span><span class="bar"></span><span class="b"></span></div>{% endfor %}
+        </div>
+        <div class="float-card fc-1"><span class="badge cls-VUS">VUS</span><span class="arrow-mini">{{ icon('arrow') }}</span><span class="badge cls-LP">LP</span><small>HNF1A · ClinVar 2026</small></div>
+        <div class="float-card fc-2"><span class="ring-icon">{{ icon('bell') }}</span><span><strong>New alert</strong><small>Consider low-dose sulfonylurea</small></span></div>
+      </div>
+    </div>
+  </section>
+
+  {# ---------------------------------------------------------------- problem #}
+  <section class="band" id="problem">
+    <div class="band-inner">
+      <div class="band-head">
+        <div class="eyebrow">The problem</div>
+        <h2>One gene can decide the whole treatment</h2>
+        <p class="lede">Monogenic diabetes is caused by a change in a single gene. It makes up about 1–2% of diabetes, yet
+          around 80% of cases are misdiagnosed as type 1 or type 2. The right diagnosis changes daily care:</p>
+      </div>
+      <div class="grid grid-3">
+        <article class="card hover gene-card">
+          <span class="gene-name">GCK</span>
+          <h3>Usually no medication</h3>
+          <p class="muted">Mild, stable blood sugar. Treatment can often be stopped outside pregnancy.</p>
+        </article>
+        <article class="card hover gene-card">
+          <span class="gene-name">HNF1A · HNF4A</span>
+          <h3>Low-dose sulfonylurea tablets</h3>
+          <p class="muted">Often works better than insulin, so a patient may move from injections to tablets.</p>
+        </article>
+        <article class="card hover gene-card">
+          <span class="gene-name">KCNJ11 · ABCC8</span>
+          <h3>High-dose sulfonylurea</h3>
+          <p class="muted">Neonatal diabetes from an activating variant can be treated with tablets instead of insulin.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  {# ---------------------------------------------------------------- hidden risk #}
+  <section class="band alt">
+    <div class="band-inner split">
+      <div>
+        <div class="eyebrow">The hidden risk</div>
+        <h2>Genetic knowledge keeps changing, but test results are read once</h2>
+        <p class="lede">Many variants are first reported as <em>uncertain</em> (VUS). As evidence grows, ClinVar reclassifies them.
+          Most record systems check a result only once, so an upgrade never reaches the doctor, and a patient can stay
+          on insulin when tablets would work.</p>
+      </div>
+      <div class="card quote-card">
+        <div class="big-number" data-count="23">23</div><div class="big-unit">%</div>
+        <p>of GCK variants that were <strong>uncertain</strong> in ClinVar 2023 are <strong>pathogenic or likely pathogenic</strong> by 2026.</p>
+        <p class="small muted">39 of 170 variants · measured on real ClinVar releases 2023-01-07 and 2026-10-19</p>
+      </div>
+    </div>
+  </section>
+
+  {# ---------------------------------------------------------------- how #}
+  <section class="band" id="how">
+    <div class="band-inner">
+      <div class="band-head">
+        <div class="eyebrow">How it works</div>
+        <h2>Four steps, repeated every time knowledge changes</h2>
+      </div>
+      <ol class="steps">
+        <li class="step-card card hover"><span class="step-n">1</span>{{ icon('upload') }}<h3>Store</h3>
+          <p class="muted">The lab uploads the patient's VCF. Variants in the 7 diabetes genes are kept with the patient's diagnosis and current medicines.</p></li>
+        <li class="step-card card hover"><span class="step-n">2</span>{{ icon('book') }}<h3>Classify</h3>
+          <p class="muted">Each variant is looked up in a versioned ClinVar release. ClinGen expert-panel classifications take priority.</p></li>
+        <li class="step-card card hover"><span class="step-n">3</span>{{ icon('pill') }}<h3>Advise</h3>
+          <p class="muted">Six treatment rules compare the gene result with current therapy, e.g. "HNF1A + insulin: consider low-dose sulfonylurea".</p></li>
+        <li class="step-card card hover"><span class="step-n">4</span>{{ icon('refresh') }}<h3>Re-check</h3>
+          <p class="muted">When a new ClinVar release or rule arrives, only patients whose variants changed are re-evaluated, and the doctor is notified.</p></li>
+      </ol>
+      <div class="outcomes">
+        <div><span class="badge cls-LP">Upgrade</span><span>new high-priority alert, marked <em>reclassified</em></span></div>
+        <div><span class="badge cls-VUS">Downgrade</span><span>old alert superseded + review notice, never a silent change</span></div>
+        <div><span class="badge cls-B">Small change</span><span>history updated quietly, no notification</span></div>
+      </div>
+    </div>
+  </section>
+
+  {# ---------------------------------------------------------------- results #}
+  <section class="band dark" id="results">
+    <div class="band-inner">
+      <div class="band-head">
+        <div class="eyebrow">Measured results</div>
+        <h2>As accurate as re-checking everyone, at a fraction of the work</h2>
+        <p class="lede">10,000-patient cohort, real ClinVar releases 2023 → 2026, compared with recomputing every patient and with a check-once baseline.</p>
+      </div>
+      <div class="grid grid-4">
+        <div class="stat-dark"><div class="value"><span data-count="100">100</span>%</div><div class="label">re-alert sensitivity</div><div class="hint">every upgraded variant reached the doctor</div></div>
+        <div class="stat-dark"><div class="value"><span data-count="0">0</span></div><div class="label">stale alerts</div><div class="hint">no outdated advice left behind</div></div>
+        <div class="stat-dark"><div class="value">3.0×</div><div class="label">faster per ClinVar release</div><div class="hint">1,031 instead of 7,301 patients re-checked</div></div>
+        <div class="stat-dark"><div class="value">19×</div><div class="label">faster per rule revision</div><div class="hint">20 instead of 7,301 patients re-checked</div></div>
+      </div>
+      <p class="small" style="opacity: .7; margin-top: 18px">A check-once system missed every re-alert and left stale advice in place. Results: <code>eval/results/</code>.</p>
+    </div>
+  </section>
+
+  {# ---------------------------------------------------------------- cta #}
+  <section class="band">
+    <div class="band-inner cta">
+      <h2>Ready to see it with real scenarios?</h2>
+      <p class="lede">Clinicians see alerts and recommendations; lab technicians upload results.</p>
+      <a class="btn accent lg" href="{{ url_for('auth.login') }}">Log in to GE-EHR {{ icon('arrow') }}</a>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="band-inner">
+      <div>
+        <strong>GE-EHR for Monogenic Diabetes</strong>
+        <p class="small muted">Ranjan Kumar Thakur · Barsha Singh Thakuri · Bishal Awasthi · Computer Science, Troy University</p>
+      </div>
+      <p class="small muted">Research prototype. Synthetic patient data only. Recommendations are advisory and require specialist review.</p>
+    </div>
+  </footer>
+</main>
+{% endblock %}

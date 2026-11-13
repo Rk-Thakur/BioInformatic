@@ -1,13 +1,15 @@
 {% extends "base.html" %}
 {% block title %}New patient{% endblock %}
 {% block content %}
-<h1>New patient</h1>
-<form method="post" class="card" style="max-width: 520px;" novalidate>
+<p class="small reveal"><a href="{{ url_for('patients.index') }}">← All patients</a></p>
+<div class="page-head"><div><div class="eyebrow reveal">Registry</div><h1 class="reveal" style="--i: 1">New patient</h1>
+  <p class="lede reveal" style="--i: 2">Upload the patient's VCF from their page after creating the record.</p></div></div>
+<form method="post" class="card reveal" style="--i: 3; max-width: 560px" novalidate>
   {{ form.csrf_token }}
   {% for field in [form.name, form.external_id, form.sex, form.birth_date, form.diabetes_type, form.age_at_diagnosis_years] %}
-    {{ field.label }} {{ field(style="width:100%") }}
+    {{ field.label }} {{ field() }}
     {% for e in field.errors %}<div class="errors">{{ e }}</div>{% endfor %}
   {% endfor %}
-  <p><button type="submit">Create patient</button> <a href="{{ url_for('patients.index') }}">Cancel</a></p>
+  <div class="row" style="margin-top: 22px"><button type="submit" class="btn accent">Create patient</button><a class="btn ghost" href="{{ url_for('patients.index') }}">Cancel</a></div>
 </form>
 {% endblock %}

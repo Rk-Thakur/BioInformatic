@@ -4,8 +4,22 @@
     {
       "name": "ge-ehr",
       "runtimeExecutable": ".venv/bin/flask",
-      "runtimeArgs": ["run", "--port", "5000"],
+      "runtimeArgs": [
+        "run",
+        "--port",
+        "5000"
+      ],
       "port": 5000
+    },
+    {
+      "name": "ge-ehr-dev-5050",
+      "runtimeExecutable": ".venv/bin/flask",
+      "runtimeArgs": [
+        "run",
+        "--port",
+        "5050"
+      ],
+      "port": 5050
     }
   ]
 }

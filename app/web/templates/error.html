@@ -1,9 +1,12 @@
 {% extends "base.html" %}
+{% from "icons.html" import icon %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-<div class="card" style="max-width: 520px; margin: 40px auto;">
-  <h1>{{ code }} · {{ title }}</h1>
-  {% if code == 403 %}<p>Your role does not have access to this page. Treatment recommendations are shown to clinicians only.</p>{% endif %}
-  <p><a href="{{ url_for('main.index') }}">Back to GE-EHR</a></p>
+<div class="card reveal" style="max-width: 520px; margin: 48px auto; text-align: center; padding: 40px">
+  <div style="display: inline-grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--surface-2); color: var(--ink-2)">{{ icon('shield' if code == 403 else 'alert') }}</div>
+  <div class="eyebrow" style="margin-top: 16px">Error {{ code }}</div>
+  <h1>{{ title }}</h1>
+  {% if code == 403 %}<p class="muted">Your role does not have access to this page. Treatment recommendations are shown to clinicians only.</p>{% endif %}
+  <p style="margin-top: 20px"><a class="btn ghost" href="{{ url_for('main.index') }}">Back to GE-EHR</a></p>
 </div>
 {% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from "icons.html" import icon %}
+{% from "macros.html" import alert_event %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow reveal">Overview</div>
+    <h1 class="reveal" style="--i: 1">Good to see you, {{ current_user.username }}</h1>
+    <p class="lede reveal" style="--i: 2">
+      Interpreting with ClinVar <strong>{{ o.release.version if o.release else '—' }}</strong>.
+      {% if o.unreviewed %}{{ o.unreviewed }} item{{ 's' if o.unreviewed != 1 }} wait for your review.{% else %}Nothing waits for review.{% endif %}
+    </p>
+  </div>
+  <a class="btn accent reveal" style="--i: 3" href="{{ url_for('alerts.index') }}">{{ icon('bell') }}Open worklist</a>
+</div>
+
+<div class="grid grid-4">
+  <div class="card stat accent reveal" style="--i: 1">
+    <span class="glyph">{{ icon('bell') }}</span>
+    <div class="label">Waiting for review</div>
+    <div class="value" data-count="{{ o.unreviewed }}">{{ '{:,}'.format(o.unreviewed) }}</div>
+    <div class="hint">{{ o.high_priority }} high priority · {{ o.review_notices }} review notice{{ 's' if o.review_notices != 1 }}</div>
+  </div>
+  <div class="card stat hover reveal" style="--i: 2">
+    <span class="glyph">{{ icon('users') }}</span>
+    <div class="label">Patients</div>
+    <div class="value" data-count="{{ o.patients }}">{{ '{:,}'.format(o.patients) }}</div>
+    <div class="hint">{{ o.active_patients }} active · {{ o.patients - o.active_patients }} deceased</div>
+  </div>
+  <div class="card stat hover reveal" style="--i: 3">
+    <span class="glyph">{{ icon('dna') }}</span>
+    <div class="label">With a genetic test</div>
+    <div class="value" data-count="{{ o.tested_patients }}">{{ '{:,}'.format(o.tested_patients) }}</div>
+    <div class="hint">7-gene monogenic diabetes panel</div>
+  </div>
+  <div class="card stat hover reveal" style="--i: 4">
+    <span class="glyph">{{ icon('pill') }}</span>
+    <div class="label">Treatment advice in force</div>
+    <div class="value" data-count="{{ o.open_treatment_alerts }}">{{ '{:,}'.format(o.open_treatment_alerts) }}</div>
+    <div class="hint">rules D1–D5, active or reviewed</div>
+  </div>
+</div>
+
+<section class="section">
+  <div class="card reveal" style="--i: 5">
+    <div class="section-head">
+      <div>
+        <h2>Latest re-evaluation</h2>
+        {% if o.last_run %}
+          <p class="muted small" style="margin: 4px 0 0">{{ o.last_run.trigger|capitalize }} change <code>{{ o.last_run.old_ref }}</code> → <code>{{ o.last_run.new_ref }}</code>
+            · {{ o.last_run.mode.replace('_', '-') }} · {{ o.last_run.finished_at.strftime('%Y-%m-%d %H:%M') if o.last_run.finished_at }}</p>
+        {% endif %}
+      </div>
+      <a class="btn ghost sm" href="{{ url_for('knowledge.index') }}">{{ icon('layers') }}Knowledge base</a>
+    </div>
+    {% if o.last_run %}
+      <div class="flow">
+        <div class="flow-node"><div class="ring">{{ icon('search') }}</div><div class="n" data-count="{{ o.last_run.variants_examined }}">{{ '{:,}'.format(o.last_run.variants_examined) }}</div><div class="l">stored variants checked</div></div>
+        <div class="flow-node"><div class="ring">{{ icon('refresh') }}</div><div class="n" data-count="{{ o.last_run.variants_changed }}">{{ '{:,}'.format(o.last_run.variants_changed) }}</div><div class="l">changed classification</div></div>
+        <div class="flow-node"><div class="ring">{{ icon('users') }}</div><div class="n" data-count="{{ o.last_run.patients_touched }}">{{ '{:,}'.format(o.last_run.patients_touched) }}</div><div class="l">patients re-evaluated</div></div>
+        <div class="flow-node"><div class="ring">{{ icon('bell') }}</div><div class="n" data-count="{{ o.last_run.alerts_created }}">{{ '{:,}'.format(o.last_run.alerts_created) }}</div><div class="l">new alerts · {{ o.last_run.alerts_superseded }} superseded</div></div>
+      </div>
+      {% if o.run_notes %}
+        <p class="flow-meta">
+          {% if 'upgrade' in o.run_notes %}{{ o.run_notes.upgrade }} upgrades{% endif %}
+          {% if 'downgrade' in o.run_notes %} · {{ o.run_notes.downgrade }} downgrades{% endif %}
+          {% if 'rule_relevant_changes' in o.run_notes %} · {{ o.run_notes.rule_relevant_changes }} could change a recommendation; the rest needed no work{% endif %}
+        </p>
+      {% endif %}
+    {% else %}
+      <p class="muted">No re-evaluation yet. When a new ClinVar release or rule version is applied
+        (<code>flask reevaluate</code>, <code>flask apply-rule</code>), its effect appears here.</p>
+    {% endif %}
+  </div>
+</section>
+
+<div class="grid grid-2 section">
+  <section>
+    <div class="section-head"><h2>High priority</h2><a class="small" href="{{ url_for('alerts.index') }}">All items {{ icon('arrow', 'icon') }}</a></div>
+    {% if o.recent %}
+      <div class="timeline">
+        {% for a in o.recent %}{{ alert_event(a, None, request.path, show_patient=True, i=loop.index) }}{% endfor %}
+      </div>
+    {% else %}
+      <div class="card flat muted">No high-priority items. Reclassified results and review notices appear here first.</div>
+    {% endif %}
+  </section>
+  <section>
+    <div class="section-head"><h2>Advice in force by rule</h2></div>
+    <div class="card reveal" style="--i: 6">
+      {% set rule_text = {'D1': 'GCK: review whether medication can stop', 'D2': 'HNF1A: consider low-dose sulfonylurea',
+                          'D3': 'HNF4A: consider low-dose sulfonylurea', 'D4': 'Neonatal: refer for high-dose sulfonylurea',
+                          'D5': 'Offer cascade testing of relatives'} %}
+      {% for code, n in o.by_rule %}
+        <div class="row" style="padding: 10px 0; {{ 'border-top: 1px solid var(--line);' if not loop.first }}">
+          <span class="badge sev-low mono">{{ code }}</span>
+          <span>{{ rule_text.get(code, code) }}</span>
+          <span class="spacer"></span>
+          <strong class="tnum">{{ n }}</strong>
+        </div>
+      {% else %}
+        <p class="muted" style="margin: 0">No treatment advice in force.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,14 +1,51 @@
 {% extends "base.html" %}
 {% block title %}Log in{% endblock %}
-{% block content %}
-<div class="card" style="max-width: 380px; margin: 40px auto;">
-  <h1>Log in</h1>
-  <p class="muted small">Genomic decision support for monogenic diabetes.</p>
-  <form method="post" novalidate>
-    {{ form.csrf_token }}
-    {{ form.username.label }} {{ form.username(autocomplete="username", autofocus=true, style="width:100%") }}
-    {{ form.password.label }} {{ form.password(autocomplete="current-password", style="width:100%") }}
-    <p><button type="submit">Log in</button></p>
-  </form>
+{% block body %}
+<div class="auth">
+  <section class="auth-art">
+   <div class="auth-copy">
+    <div class="helix" aria-hidden="true">
+      {% for i in range(14) %}<div class="rung" style="--i: {{ i }}"><span class="a"></span><span class="bar"></span><span class="b"></span></div>{% endfor %}
+    </div>
+    <div class="eyebrow reveal">Genomic decision support</div>
+    <h1 class="reveal" style="--i: 1">When the science changes, the doctor hears about it.</h1>
+    <p class="reveal" style="--i: 2">GE-EHR keeps every patient's monogenic diabetes variants, re-checks them each time ClinVar
+      or a treatment rule changes, and tells the clinician when tablets may replace insulin.</p>
+   </div>
+  </section>
+  <section class="auth-form">
+    <div class="card reveal" style="--i: 2">
+      <h2>Log in</h2>
+      <p class="muted small" style="margin: 6px 0 4px">Use the account your administrator gave you.</p>
+      {% for category, message in get_flashed_messages(with_categories=true) %}
+        <div class="flash {{ category }}" role="status" style="margin-top: 14px">{{ message }}</div>
+      {% endfor %}
+      <form method="post" novalidate>
+        {{ form.csrf_token }}
+        {{ form.username.label }} {{ form.username(autocomplete="username", autofocus=true) }}
+        {{ form.password.label }} {{ form.password(autocomplete="current-password") }}
+        <button type="submit" class="btn accent" style="width: 100%; justify-content: center; margin-top: 20px">Log in</button>
+      </form>
+
+      {% if demo_users %}
+        <div class="demo-login">
+          <div class="divider"><span>or try a demo account</span></div>
+          <form method="post" action="{{ url_for('auth.demo_login') }}">
+            {{ demo_form.csrf_token }}
+            <label for="demo-user">Demo account</label>
+            <select id="demo-user" name="username">
+              {% set roles = {'clinician': 'Clinician', 'lab_tech': 'Lab technician', 'admin': 'Admin'} %}
+              {% for u in demo_users %}
+                <option value="{{ u.username }}">{{ u.username }} · {{ roles.get(u.role, u.role) }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn ghost" style="width: 100%; justify-content: center; margin-top: 12px">Log in as this demo user</button>
+          </form>
+          <p class="small muted" style="margin: 10px 0 0">Clinicians see alerts and advice; lab technicians upload results but never see advice.
+            Demo mode: synthetic data, no password needed. Turned off with <code>DEMO_LOGIN=0</code>.</p>
+        </div>
+      {% endif %}
+    </div>
+  </section>
 </div>
 {% endblock %}

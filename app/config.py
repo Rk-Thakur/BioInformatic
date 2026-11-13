@@ -19,6 +19,11 @@ class Config:
     REMEMBER_COOKIE_HTTPONLY = True
     PERMANENT_SESSION_LIFETIME = 8 * 60 * 60  # one working day, in seconds
 
+    # One-click login as a demo_* account from the login page (no password shown).
+    # For local demos only: on in development, off unless DEMO_LOGIN=1 elsewhere.
+    DEMO_LOGIN = os.environ.get("DEMO_LOGIN", "0") == "1"
+    DEMO_PREFIX = "demo_"
+
     # Monogenic diabetes gene panel (paper §4.2).
     PANEL_GENES = ("GCK", "HNF1A", "HNF4A", "HNF1B", "KCNJ11", "ABCC8", "INS")
     # "Current therapy" is evaluated as of this date (plan §2a, C13).
@@ -32,6 +37,7 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    DEMO_LOGIN = os.environ.get("DEMO_LOGIN", "1") == "1"
 
 
 class TestingConfig(Config):

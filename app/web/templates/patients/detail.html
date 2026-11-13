@@ -1,120 +1,164 @@
 {% extends "base.html" %}
-{% from "macros.html" import alert_card, classification, severity %}
+{% from "icons.html" import icon %}
+{% from "macros.html" import alert_event, classification, initials %}
 {% block title %}{{ patient.name }}{% endblock %}
 {% block content %}
-<p class="small"><a href="{{ url_for('patients.index') }}">← Patients</a></p>
-<div class="row" style="justify-content: space-between;">
-  <div>
-    <h1>{{ patient.name }}{% if not patient.is_active %} <span class="badge sev-info">inactive</span>{% endif %}</h1>
-    <p class="muted small">ID <code>{{ patient.external_id }}</code>{% if patient.family_id %} · family {{ patient.family_id }}{% endif %}
-      · interpreted with ClinVar {{ release.version if release else '— (no release loaded)' }}</p>
+{% set band_of = {'P': 'actionable', 'LP': 'actionable', 'P/LP': 'actionable', 'VUS': 'vus', 'CONFLICT': 'vus',
+                  'LB': 'benign', 'B': 'benign', 'B/LB': 'benign'} %}
+<p class="small reveal"><a href="{{ url_for('patients.index') }}">← All patients</a></p>
+
+<div class="page-head">
+  <div class="row" style="gap: 16px">
+    <span class="avatar lg reveal">{{ initials(patient.name) }}</span>
+    <div>
+      <h1 class="reveal" style="--i: 1">{{ patient.name }}</h1>
+      <div class="row small muted reveal" style="--i: 2; gap: 8px; margin-top: 6px">
+        <code>{{ patient.external_id }}</code>
+        {% if patient.family_id %}<span class="badge sev-low">family {{ patient.family_id }}</span>{% endif %}
+        {% if patient.is_active %}<span class="badge ok">active</span>{% else %}<span class="badge sev-info">inactive</span>{% endif %}
+        <span>interpreted with ClinVar {{ release.version if release else '— (no release loaded)' }}</span>
+      </div>
+    </div>
   </div>
-  {% if clinical %}<a class="button secondary" style="background:transparent;color:var(--link)" href="{{ url_for('patients.fhir', patient_id=patient.id) }}">FHIR export</a>{% endif %}
+  {% if clinical %}<a class="btn ghost reveal" style="--i: 3" href="{{ url_for('patients.fhir', patient_id=patient.id) }}">{{ icon('export') }}FHIR export</a>{% endif %}
 </div>
 
-<div class="grid">
-  <div class="card">
-    <strong>Diagnosis</strong>
+<div class="grid grid-2">
+  <div class="card hover reveal" style="--i: 2">
+    <div class="row"><span class="ring-icon">{{ icon('book') }}</span><h3>Diagnosis</h3></div>
     {% if diagnosis %}
-      <p style="margin:6px 0 0">{{ diagnosis.diabetes_type }}{% if diagnosis.age_at_diagnosis_months is not none %} · diagnosed at
-        {% if diagnosis.age_at_diagnosis_months < 24 %}{{ '%g'|format(diagnosis.age_at_diagnosis_months) }} months{% else %}{{ '%g'|format((diagnosis.age_at_diagnosis_months / 12)|round(1)) }} years{% endif %}{% endif %}</p>
-    {% else %}<p class="muted" style="margin:6px 0 0">Not recorded</p>{% endif %}
-    {% if patient.sex or patient.birth_date %}<p class="small muted" style="margin:4px 0 0">{{ patient.sex or '' }} {{ patient.birth_date or '' }}</p>{% endif %}
+      <p style="margin: 12px 0 0; font-size: 18px; font-weight: 600">{{ diagnosis.diabetes_type.replace('type', 'Type ') if diagnosis.diabetes_type.startswith('type') else diagnosis.diabetes_type|capitalize }}</p>
+      {% if diagnosis.age_at_diagnosis_months is not none %}
+        <p class="muted" style="margin: 2px 0 0">diagnosed at
+          {% if diagnosis.age_at_diagnosis_months < 24 %}{{ '%g'|format(diagnosis.age_at_diagnosis_months) }} months{% else %}{{ '%g'|format((diagnosis.age_at_diagnosis_months / 12)|round(1)) }} years{% endif %}</p>
+      {% endif %}
+    {% else %}<p class="muted" style="margin: 12px 0 0">Not recorded</p>{% endif %}
+    {% if patient.sex or patient.birth_date %}<p class="small muted" style="margin: 6px 0 0">{{ {'F': 'Female', 'M': 'Male'}.get(patient.sex, '') }} {% if patient.birth_date %}· born {{ patient.birth_date }}{% endif %}</p>{% endif %}
   </div>
-  <div class="card">
-    <strong>Current therapy</strong> <span class="small muted">as of {{ as_of }}</span>
-    <p style="margin:6px 0 0">{{ therapy|join(', ') if therapy else 'No glucose-lowering medication' }}</p>
+  <div class="card hover reveal" style="--i: 3">
+    <div class="row"><span class="ring-icon">{{ icon('pill') }}</span><h3>Current therapy</h3><span class="spacer"></span><span class="small muted">as of {{ as_of }}</span></div>
+    <div class="row" style="margin-top: 14px; gap: 8px">
+      {% for t in therapy %}<span class="badge sev-low" style="font-size: 13px; padding: 4px 12px">{{ t }}</span>{% else %}<span class="muted">No glucose-lowering medication</span>{% endfor %}
+    </div>
   </div>
 </div>
 
 {% if clinical %}
-  <h2>Alerts</h2>
-  {% for a in open_alerts %}
-    {{ alert_card(a, action_form, request.path) }}
+<section class="section">
+  <div class="section-head"><h2>Alerts</h2><span class="muted small">{{ open_alerts|length }} in force · newest knowledge first</span></div>
+  {% if open_alerts %}
+    <div class="timeline">{% for a in open_alerts %}{{ alert_event(a, action_form, request.path, i=loop.index) }}{% endfor %}</div>
   {% else %}
-    <p class="muted">No alerts for this patient.</p>
-  {% endfor %}
+    <div class="card flat muted">No alerts for this patient.</div>
+  {% endif %}
+</section>
 {% endif %}
 
-<h2>Variants in panel genes</h2>
-<p class="small muted">
-  {{ variants|length }} shown of {{ total_variants }} stored.
-  {% if show_all %}<a href="{{ url_for('patients.detail', patient_id=patient.id) }}">Show only variants found in ClinVar</a>
-  {% else %}Variants not in ClinVar are “not classified” (not VUS). <a href="{{ url_for('patients.detail', patient_id=patient.id, all=1) }}">Show all</a>{% endif %}
-</p>
-<div class="table-wrap">
-<table>
-  <thead><tr><th>Gene</th><th>Variant (GRCh38)</th><th>Zygosity</th><th>Classification</th><th>Source</th></tr></thead>
-  <tbody>
-  {% for v in variants %}
-    <tr>
-      <td><strong>{{ v.pv.gene }}</strong></td>
-      <td><code>{{ v.pv.chrom }}:{{ v.pv.pos }} {{ v.pv.ref|truncate(12, True, '…') }}&gt;{{ v.pv.alt|truncate(12, True, '…') }}</code></td>
-      <td>{{ v.pv.zygosity }}</td>
-      <td>{{ classification(v.classification) }}</td>
-      <td class="small">
-        {% if v.source == 'expert_panel' %}ClinGen expert panel{% elif v.source == 'clinvar' %}ClinVar{% else %}—{% endif %}
-        {% if v.clinvar_id %} · <a href="https://www.ncbi.nlm.nih.gov/clinvar/variation/{{ v.clinvar_id }}/" rel="noopener noreferrer" target="_blank">VCV {{ v.clinvar_id }}</a>{% endif %}
-      </td>
-    </tr>
-  {% else %}
-    <tr><td colspan="5" class="muted">No variants{% if not show_all %} found in ClinVar{% endif %}.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<section class="section">
+  {% set counts = {'actionable': 0, 'vus': 0, 'benign': 0, 'other': 0} %}
+  {% for v in variants %}{% set b = band_of.get(v.classification, 'other') %}{% set _ = counts.update({b: counts[b] + 1}) %}{% endfor %}
+  <div class="section-head">
+    <div><h2>Variants in panel genes</h2>
+      <p class="muted small" style="margin: 4px 0 0">{{ variants|length }} shown of {{ total_variants }} stored.
+        {% if show_all %}<a href="{{ url_for('patients.detail', patient_id=patient.id) }}">Show only variants found in ClinVar</a>
+        {% else %}Variants not in ClinVar are “not classified” (not VUS). <a href="{{ url_for('patients.detail', patient_id=patient.id, all=1) }}">Show all</a>{% endif %}</p>
+    </div>
+    <div class="chipbar" data-filter-group="variant-table" role="group" aria-label="Filter variants">
+      <button class="chip" type="button" data-filter="all" aria-pressed="true">All<span class="n">{{ variants|length }}</span></button>
+      <button class="chip" type="button" data-filter="actionable" aria-pressed="false">P/LP<span class="n">{{ counts.actionable }}</span></button>
+      <button class="chip" type="button" data-filter="vus" aria-pressed="false">Uncertain<span class="n">{{ counts.vus }}</span></button>
+      <button class="chip" type="button" data-filter="benign" aria-pressed="false">Benign<span class="n">{{ counts.benign }}</span></button>
+    </div>
+  </div>
+  <div class="table-wrap">
+  <table id="variant-table">
+    <thead><tr><th>Gene</th><th>Variant (GRCh38)</th><th>Zygosity</th><th>Classification</th><th>Source</th></tr></thead>
+    <tbody>
+    {% for v in variants %}
+      <tr data-band="{{ band_of.get(v.classification, 'other') }}">
+        <td><strong>{{ v.pv.gene }}</strong></td>
+        <td><code>{{ v.pv.chrom }}:{{ v.pv.pos }} {{ v.pv.ref|truncate(12, True, '…') }}&gt;{{ v.pv.alt|truncate(12, True, '…') }}</code></td>
+        <td class="muted">{{ v.pv.zygosity }}</td>
+        <td>{{ classification(v.classification) }}</td>
+        <td class="small">
+          {% if v.source == 'expert_panel' %}<span class="badge ok">{{ icon('shield') }}ClinGen expert panel</span>{% elif v.source == 'clinvar' %}ClinVar{% else %}—{% endif %}
+          {% if v.clinvar_id %} · <a href="https://www.ncbi.nlm.nih.gov/clinvar/variation/{{ v.clinvar_id }}/" rel="noopener noreferrer" target="_blank">VCV {{ v.clinvar_id }}</a>{% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="muted" style="padding: 28px; text-align: center">No variants{% if not show_all %} found in ClinVar{% endif %}.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<div class="grid grid-2 section">
+  <section>
+    <div class="section-head"><h2>Upload VCF</h2></div>
+    <form method="post" enctype="multipart/form-data" action="{{ url_for('patients.upload', patient_id=patient.id) }}">
+      {{ upload_form.csrf_token }}
+      <div class="dropzone">
+        {{ icon('upload') }}
+        <span class="file">Drop a VCF here or click to choose</span>
+        <span class="small muted">.vcf or .vcf.gz · GRCh38 · one sample</span>
+        {{ upload_form.vcf(accept=".vcf,.gz", **{'aria-label': 'VCF file'}) }}
+      </div>
+      <button type="submit" class="btn accent" style="margin-top: 12px" data-upload-submit>{{ icon('upload') }}Upload and evaluate</button>
+    </form>
+    {% if uploads %}
+      <div class="table-wrap" style="margin-top: 16px">
+      <table class="small">
+        <thead><tr><th>File</th><th>Uploaded</th><th>Status</th><th>Panel variants</th></tr></thead>
+        <tbody>
+        {% for u in uploads %}
+          <tr><td>{{ icon('file') }} {{ u.filename }}</td><td class="muted">{{ u.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>{% if u.status == 'accepted' %}<span class="badge ok">accepted</span>{% else %}<span class="badge sev-high">rejected</span> <span class="muted">{{ u.error }}</span>{% endif %}</td>
+            <td class="tnum">{{ u.panel_records }} <span class="muted">of {{ u.total_records }}</span></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    {% endif %}
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Medications</h2></div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Medication</th><th>Class</th><th>Period</th>{% if clinical %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+      {% for m in meds %}
+        <tr><td>{{ m.description|truncate(42, True, '…') }}</td><td><span class="badge sev-low">{{ m.drug_class }}</span></td>
+          <td class="small muted tnum">{{ m.start }} → {{ m.stop or 'now' }}</td>
+          {% if clinical %}<td>{% if m.is_active_on(as_of) %}
+            <form class="inline" method="post" action="{{ url_for('patients.stop_medication', patient_id=patient.id, med_id=m.id) }}">
+              {{ action_form.csrf_token }}<button type="submit" class="btn ghost sm">Stop</button></form>{% endif %}</td>{% endif %}</tr>
+      {% else %}
+        <tr><td colspan="4" class="muted">No medications recorded.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% if clinical %}
+    <form method="post" action="{{ url_for('patients.add_medication', patient_id=patient.id) }}" class="card flat" style="margin-top: 12px">
+      {{ med_form.csrf_token }}
+      <div class="field-inline">
+        <div>{{ med_form.drug_class.label }} {{ med_form.drug_class() }}</div>
+        <div>{{ med_form.start.label }} {{ med_form.start() }}</div>
+      </div>
+      {{ med_form.description.label }} {{ med_form.description(placeholder="e.g. Gliclazide 40 mg") }}
+      <div class="row" style="margin-top: 12px"><button type="submit" class="btn">{{ icon('plus') }}Add medication</button>
+        <span class="small muted">Saving re-checks this patient's advice.</span></div>
+    </form>
+    {% endif %}
+  </section>
 </div>
 
-<h2>Upload VCF</h2>
-<form method="post" enctype="multipart/form-data" action="{{ url_for('patients.upload', patient_id=patient.id) }}" class="card row">
-  {{ upload_form.csrf_token }}
-  <div>{{ upload_form.vcf.label }} {{ upload_form.vcf(accept=".vcf,.gz") }}</div>
-  <button type="submit">Upload</button>
-</form>
-{% if uploads %}
-<div class="table-wrap">
-<table class="small">
-  <thead><tr><th>File</th><th>Uploaded</th><th>Status</th><th>Records</th><th>In panel genes</th></tr></thead>
-  <tbody>
-  {% for u in uploads %}
-    <tr><td>{{ u.filename }}</td><td>{{ u.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
-      <td>{% if u.status == 'accepted' %}<span class="badge ok">accepted</span>{% else %}<span class="badge sev-high">rejected</span> {{ u.error }}{% endif %}</td>
-      <td>{{ u.total_records }}</td><td>{{ u.panel_records }}</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
-</div>
-{% endif %}
-
-<h2>Medications</h2>
-<div class="table-wrap">
-<table>
-  <thead><tr><th>Medication</th><th>Class</th><th>Start</th><th>Stop</th>{% if clinical %}<th></th>{% endif %}</tr></thead>
-  <tbody>
-  {% for m in meds %}
-    <tr><td>{{ m.description }}</td><td>{{ m.drug_class }}</td><td>{{ m.start }}</td><td>{{ m.stop or '' }}</td>
-      {% if clinical %}<td>{% if m.is_active_on(as_of) %}
-        <form class="inline" method="post" action="{{ url_for('patients.stop_medication', patient_id=patient.id, med_id=m.id) }}">
-          {{ action_form.csrf_token }}<button type="submit" class="secondary">Stop</button></form>{% endif %}</td>{% endif %}</tr>
-  {% else %}
-    <tr><td colspan="5" class="muted">No medications recorded.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
-</div>
-{% if clinical %}
-<form method="post" action="{{ url_for('patients.add_medication', patient_id=patient.id) }}" class="card row" style="margin-top:10px">
-  {{ med_form.csrf_token }}
-  <div>{{ med_form.drug_class.label }} {{ med_form.drug_class() }}</div>
-  <div>{{ med_form.description.label }} {{ med_form.description(placeholder="e.g. Gliclazide 40 mg") }}</div>
-  <div>{{ med_form.start.label }} {{ med_form.start() }}</div>
-  <button type="submit">Add medication</button>
-  <span class="small muted">Saving re-checks this patient's alerts.</span>
-</form>
-
-{% if past_alerts %}
-<h2>History</h2>
-<p class="small muted">Superseded and reviewed items are kept permanently for provenance.</p>
-{% for a in past_alerts %}{{ alert_card(a, None, request.path) }}{% endfor %}
-{% endif %}
+{% if clinical and past_alerts %}
+<section class="section">
+  <div class="section-head"><h2>History</h2><span class="muted small">Superseded and reviewed items are kept permanently for provenance.</span></div>
+  <div class="timeline">{% for a in past_alerts %}{{ alert_event(a, None, request.path, i=loop.index) }}{% endfor %}</div>
+</section>
 {% endif %}
 {% endblock %}

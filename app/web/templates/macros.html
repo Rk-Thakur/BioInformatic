@@ -1,43 +1,56 @@
+{% from "icons.html" import icon %}
+
 {% macro severity(s) -%}<span class="badge sev-{{ s }}">{{ s }}</span>{%- endmacro %}
 
-{% macro classification(c) -%}
-  {% set cls = {'P': 'sev-high', 'LP': 'sev-high', 'P/LP': 'sev-high', 'VUS': 'sev-medium',
-                'CONFLICT': 'sev-medium', 'LB': 'ok', 'B': 'ok', 'B/LB': 'ok'}.get(c, 'sev-info') %}
-  <span class="badge {{ cls }}">{{ c }}</span>
-{%- endmacro %}
+{% macro classification(c) -%}<span class="badge cls-{{ c }}">{{ c }}</span>{%- endmacro %}
 
 {% macro kind_label(a) -%}
-  {%- if a.kind == 'review_notice' -%}Review notice{%- elif a.kind == 'info_note' -%}Info note{%- else -%}Rule {{ a.rule_code }}{%- endif -%}
+  {%- if a.kind == 'review_notice' -%}Review notice{%- elif a.kind == 'info_note' -%}Info note · {{ a.rule_code }}{%- else -%}Rule {{ a.rule_code }}{%- endif -%}
 {%- endmacro %}
 
-{% macro alert_card(a, action_form, back, show_patient=False) %}
-  <div class="card alert-card sev-border-{{ a.severity }}">
-    <div class="row" style="justify-content: space-between; align-items: center;">
-      <div>
-        <strong>{{ kind_label(a) }}</strong>
+{% macro initials(name) -%}
+  {%- set parts = name.split() -%}{{ (parts[0][:1] ~ (parts[1][:1] if parts|length > 1 else ''))|upper }}
+{%- endmacro %}
+
+{# One alert as a timeline event. action_form=None hides the review button. #}
+{% macro alert_event(a, action_form, back, show_patient=False, i=0) %}
+  <article class="event reveal sev-border-{{ a.severity }}{% if a.priority == 'high' and a.status == 'active' %} priority-high{% endif %}{% if a.status == 'superseded' %} past{% endif %}" style="--i: {{ i }}">
+    <div class="card hover">
+      <div class="event-head">
+        <span class="event-title">{{ kind_label(a) }}</span>
         {{ severity(a.severity) }}
         {% if a.priority == 'high' %}<span class="badge sev-high">high priority</span>{% endif %}
-        {% if a.reclassified %}<span class="badge sev-low">reclassified</span>{% endif %}
-        {% if a.status == 'reviewed' %}<span class="badge ok">reviewed</span>{% endif %}
+        {% if a.reclassified %}<span class="badge sev-low">{{ icon('refresh', 'icon') }}reclassified</span>{% endif %}
+        {% if a.status == 'reviewed' %}<span class="badge ok">{{ icon('check', 'icon') }}reviewed</span>{% endif %}
         {% if a.status == 'superseded' %}<span class="badge sev-info">superseded</span>{% endif %}
+        <span class="spacer"></span>
+        {% if a.status == 'active' and action_form %}
+          <form class="inline" method="post" action="{{ url_for('alerts.review', alert_id=a.id) }}">
+            {{ action_form.csrf_token }}<input type="hidden" name="back" value="{{ back }}">
+            <button type="submit" class="btn ghost sm">{{ icon('check') }}Mark reviewed</button>
+          </form>
+        {% endif %}
       </div>
-      {% if a.status == 'active' and action_form %}
-        <form class="inline" method="post" action="{{ url_for('alerts.review', alert_id=a.id) }}">
-          {{ action_form.csrf_token }}<input type="hidden" name="back" value="{{ back }}">
-          <button type="submit" class="secondary">Mark reviewed</button>
-        </form>
-      {% endif %}
+      <p class="event-msg">{{ a.message }}</p>
+      <div class="meta">
+        {% if show_patient %}<span>{{ icon('users') }}<a href="{{ url_for('patients.detail', patient_id=a.patient_id) }}">{{ a.patient.name }}</a></span>{% endif %}
+        {% if a.patient_variant %}<span>{{ icon('dna') }}<code>{{ a.patient_variant.gene }} {{ a.patient_variant.chrom }}:{{ a.patient_variant.pos }} {{ a.patient_variant.ref|truncate(10, True, '…') }}&gt;{{ a.patient_variant.alt|truncate(10, True, '…') }}</code></span>{% endif %}
+        {% if a.rule %}<span>{{ icon('book') }}rule {{ a.rule.code }} v{{ a.rule.version }} · source {{ a.rule.source }}</span>{% endif %}
+        <span>{{ icon('clock') }}{{ a.created_at.strftime('%Y-%m-%d') }}</span>
+        {% if a.reviewed_at %}<span>{{ icon('check') }}reviewed {{ a.reviewed_at.strftime('%Y-%m-%d') }}</span>{% endif %}
+      </div>
+      <div class="prov" aria-label="Provenance">
+        <span>created under</span><span class="step">ClinVar {{ a.release.version }}</span>
+        {% if a.provenance and a.provenance|length > 1 %}
+          <span>· confirmed under:</span>
+          {% for pr in a.provenance %}
+            <span class="step">ClinVar {{ pr.release.version }} ({{ pr.classification }})</span>{% if not loop.last %}<span class="arrow"></span>{% endif %}
+          {% endfor %}
+        {% endif %}
+      </div>
     </div>
-    <p style="margin: 8px 0;">{{ a.message }}</p>
-    <div class="small muted">
-      {% if show_patient %}<a href="{{ url_for('patients.detail', patient_id=a.patient_id) }}">{{ a.patient.name }}</a> · {% endif %}
-      {% if a.patient_variant %}{{ a.patient_variant.gene }} {{ a.patient_variant.chrom }}:{{ a.patient_variant.pos }} {{ a.patient_variant.ref }}&gt;{{ a.patient_variant.alt }} · {% endif %}
-      created under ClinVar {{ a.release.version }}{% if a.rule %}, rule {{ a.rule.code }} v{{ a.rule.version }} · source {{ a.rule.source }}{% endif %}
-      · {{ a.created_at.strftime('%Y-%m-%d') }}
-      {% if a.provenance and a.provenance|length > 1 %}
-        · confirmed under: {% for pr in a.provenance %}ClinVar {{ pr.release.version }} ({{ pr.classification }}){{ ', ' if not loop.last }}{% endfor %}
-      {% endif %}
-      {% if a.reviewed_at %} · reviewed {{ a.reviewed_at.strftime('%Y-%m-%d') }}{% endif %}
-    </div>
-  </div>
+  </article>
 {% endmacro %}
+
+{# Back-compat name used by older templates. #}
+{% macro alert_card(a, action_form, back, show_patient=False) %}{{ alert_event(a, action_form, back, show_patient) }}{% endmacro %}

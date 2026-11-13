@@ -24,6 +24,9 @@ services:
       # reclassified alerts and review notices. Set to "" to stay on 2023-01-07.
       REEVALUATE_TO: "2026-10-19"
       # DEMO_PASSWORD: "choose-one"   # default: generated, see demo_accounts.txt
+      # One-click "Log in as demo user" on the login page (no password shown).
+      # Local demos only: set to "0" (or remove) for anything others can reach.
+      DEMO_LOGIN: "1"
     volumes:
       - ge_ehr_instance:/app/instance   # database, secret key, demo accounts
       - ./eval/results:/app/eval/results # benchmark output
