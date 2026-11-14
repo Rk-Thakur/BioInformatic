@@ -42,7 +42,9 @@ levels:
   uncertain:
     label: Uncertain
     colour: grey
-    meaning: Carries a variant whose effect is not yet known. Not used to judge risk.
+    meaning: >-
+      Carries a variant of uncertain significance (VUS). Not used to judge risk.
+      Conflicting ClinVar entries do not count (see G6).
   normal:
     label: No increased genetic risk found
     colour: green
@@ -99,7 +101,7 @@ assignments:
 
   - code: G5
     genes: [GCK, HNF1A, HNF4A, HNF1B, KCNJ11, ABCC8, INS]
-    classes: [VUS, CONFLICT]
+    classes: [VUS]
     level: uncertain
     advice: >-
       The effect of this variant is not yet known and it must not be used to predict
@@ -108,7 +110,11 @@ assignments:
 
   - code: G6
     genes: [GCK, HNF1A, HNF4A, HNF1B, KCNJ11, ABCC8, INS]
-    classes: [LB, B, B/LB, OTHER, NC]
+    # CONFLICT is here on purpose (Stage 7 step 2): in these genes the conflicting
+    # entries a healthy genome carries are mostly common polymorphisms (one has a 1000
+    # Genomes frequency of 47%), so every person would otherwise be "uncertain".
+    # Treatment rule D6 ignores CONFLICT for the same reason.
+    classes: [LB, B, B/LB, CONFLICT, OTHER, NC]
     level: normal
     advice: >-
       No increased genetic risk found in the 7 genes tested. The usual risk of type 2
