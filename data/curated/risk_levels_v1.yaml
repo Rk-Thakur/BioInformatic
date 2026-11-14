@@ -1,0 +1,116 @@
+# GE-EHR genetic risk levels for people WITHOUT diabetes, version 1 (Stage 7, DD42).
+#
+# Who it is for: healthy people with a gene test, typically relatives offered cascade
+# testing after a family member's diagnosis (rule D5). Not used for patients who already
+# have diabetes: they get treatment rules D1-D6 instead.
+#
+# How a level is chosen:
+#   1. Every stored variant in the 7 panel genes is classified with the CURRENT ClinVar
+#      release (ClinGen expert panel first), exactly as for patients.
+#   2. Each variant is matched against `assignments` below (gene + classification).
+#   3. The person's level is the most serious one found, in the order of `precedence`.
+#      Lower-level findings are still listed (e.g. a VUS shown as "monitored").
+#   4. No variant in the panel genes, or only benign / not-classified ones -> normal.
+#
+# Levels are categories, not percentages: we show no penetrance figure we cannot cite
+# for every gene. Advice is advisory only and always includes genetic counselling.
+#
+# Sources: numbers in [] are the paper's reference list. Items marked [check] are
+# outside it and must be verified by the team before they are quoted anywhere.
+#   [1]  Kang et al. 2021, Precision and Future Medicine 5:106-116
+#   [5]  ClinGen Monogenic Diabetes VCEP specifications
+#   [7]  Naylor et al. 2024, Communications Medicine 4:145
+#   [8]  Richards et al. 2015, ACMG/AMP guidelines, Genet Med 17:405-424
+#   ISPAD 2018  Hattersley et al., ISPAD Clinical Practice Consensus Guidelines 2018:
+#               monogenic diabetes in children and adolescents. Pediatr Diabetes
+#               19(Suppl 27):47-63 [check]
+#   Steele 2014 Steele et al., JAMA 311:279-286 (GCK: mild hyperglycaemia, few
+#               complications) [check]
+
+version: 1
+effective_from: 2026-11-14
+
+levels:
+  high:
+    label: High genetic risk
+    colour: red
+    meaning: Carries a disease-causing variant in a gene where diabetes usually develops.
+  mild:
+    label: Mild, stable
+    colour: amber
+    meaning: Carries a GCK variant that causes lifelong mild raised blood sugar, rarely harmful.
+  uncertain:
+    label: Uncertain
+    colour: grey
+    meaning: Carries a variant whose effect is not yet known. Not used to judge risk.
+  normal:
+    label: No increased genetic risk found
+    colour: green
+    meaning: No disease-causing variant found in the 7 genes tested.
+
+precedence: [high, mild, uncertain, normal]
+
+assignments:
+  - code: G1
+    genes: [HNF1A, HNF4A]
+    classes: [P, LP, P/LP]
+    level: high
+    advice: >-
+      High risk of developing diabetes, usually in adolescence or early adulthood.
+      Arrange regular blood-glucose checks (interval set by the clinician) and genetic
+      counselling. If diabetes develops, low-dose sulfonylurea is often effective.
+    pregnancy_note: >-
+      HNF4A: tell the obstetric team; the baby may be large and have low blood sugar
+      after birth.
+    source: "[1, 7]; ISPAD 2018 [check]"
+
+  - code: G2
+    genes: [HNF1B]
+    classes: [P, LP, P/LP]
+    level: high
+    advice: >-
+      Risk of diabetes and of kidney or urinary-tract problems; how severe varies, even
+      within one family. Arrange blood-glucose checks, a kidney assessment and genetic
+      counselling.
+    source: "[1]; ISPAD 2018 [check]"
+
+  - code: G3
+    genes: [KCNJ11, ABCC8, INS]
+    classes: [P, LP, P/LP]
+    level: high
+    advice: >-
+      Variants in this gene can cause neonatal diabetes or diabetes later in life, with
+      variable onset. Refer to a diabetes genetics specialist, who will also confirm
+      whether the variant is inherited in a way that affects a single-copy carrier.
+    source: "[1, 7]; ISPAD 2018 [check]"
+
+  - code: G4
+    genes: [GCK]
+    classes: [P, LP, P/LP]
+    level: mild
+    advice: >-
+      Lifelong mild, stable raised fasting blood sugar from birth. Usually needs no
+      treatment and carries a low risk of complications. Record the result so it is not
+      mistaken for type 1 or type 2 diabetes later. Genetic counselling.
+    pregnancy_note: >-
+      Tell the obstetric team: management in pregnancy depends on whether the baby
+      carries the variant.
+    source: "[1]; Steele 2014 [check]"
+
+  - code: G5
+    genes: [GCK, HNF1A, HNF4A, HNF1B, KCNJ11, ABCC8, INS]
+    classes: [VUS, CONFLICT]
+    level: uncertain
+    advice: >-
+      The effect of this variant is not yet known and it must not be used to predict
+      diabetes. GE-EHR re-checks it automatically whenever ClinVar changes.
+    source: "[5, 8]"
+
+  - code: G6
+    genes: [GCK, HNF1A, HNF4A, HNF1B, KCNJ11, ABCC8, INS]
+    classes: [LB, B, B/LB, OTHER, NC]
+    level: normal
+    advice: >-
+      No increased genetic risk found in the 7 genes tested. The usual risk of type 2
+      diabetes (weight, activity, family history) still applies.
+    source: "[8]"
