@@ -5,7 +5,17 @@
 {% macro classification(c) -%}<span class="badge cls-{{ c }}">{{ c }}</span>{%- endmacro %}
 
 {% macro kind_label(a) -%}
-  {%- if a.kind == 'review_notice' -%}Review notice{%- elif a.kind == 'info_note' -%}Info note · {{ a.rule_code }}{%- else -%}Rule {{ a.rule_code }}{%- endif -%}
+  {%- set ra = risk_levels().assignment(a.rule_code) if a.rule_code and a.rule_code.startswith('G') else none -%}
+  {%- if a.kind == 'review_notice' -%}Review notice
+  {%- elif ra -%}Genetic risk · {{ risk_levels().label(ra.level) }}
+  {%- elif a.kind == 'info_note' -%}Info note · {{ a.rule_code }}
+  {%- else -%}Rule {{ a.rule_code }}{%- endif -%}
+{%- endmacro %}
+
+{# Risk level pill (Stage 7). level: high | mild | uncertain | normal | untested #}
+{% macro risk_badge(level) -%}
+  {%- set text = {'high': 'High risk', 'mild': 'Mild', 'uncertain': 'Uncertain', 'normal': 'Normal', 'untested': 'Not tested'} -%}
+  <span class="badge risk-badge risk-{{ level }}"><span class="dot" aria-hidden="true"></span>{{ text.get(level, level) }}</span>
 {%- endmacro %}
 
 {% macro initials(name) -%}
@@ -35,7 +45,9 @@
       <div class="meta">
         {% if show_patient %}<span>{{ icon('users') }}<a href="{{ url_for('patients.detail', patient_id=a.patient_id) }}">{{ a.patient.name }}</a></span>{% endif %}
         {% if a.patient_variant %}<span>{{ icon('dna') }}<code>{{ a.patient_variant.gene }} {{ a.patient_variant.chrom }}:{{ a.patient_variant.pos }} {{ a.patient_variant.ref|truncate(10, True, '…') }}&gt;{{ a.patient_variant.alt|truncate(10, True, '…') }}</code></span>{% endif %}
-        {% if a.rule %}<span>{{ icon('book') }}rule {{ a.rule.code }} v{{ a.rule.version }} · source {{ a.rule.source }}</span>{% endif %}
+        {% if a.rule %}<span>{{ icon('book') }}rule {{ a.rule.code }} v{{ a.rule.version }} · source {{ a.rule.source }}</span>
+        {% elif a.rule_code and a.rule_code.startswith('G') and risk_levels().assignment(a.rule_code) %}
+          <span>{{ icon('book') }}risk levels v{{ risk_levels().version }} · {{ a.rule_code }} · source {{ risk_levels().assignment(a.rule_code).source }}</span>{% endif %}
         <span>{{ icon('clock') }}{{ a.created_at.strftime('%Y-%m-%d') }}</span>
         {% if a.reviewed_at %}<span>{{ icon('check') }}reviewed {{ a.reviewed_at.strftime('%Y-%m-%d') }}</span>{% endif %}
       </div>

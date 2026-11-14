@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "icons.html" import icon %}
-{% from "macros.html" import alert_event %}
+{% from "macros.html" import alert_event, risk_badge %}
 {% block title %}Overview{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -26,7 +26,7 @@
     <span class="glyph">{{ icon('users') }}</span>
     <div class="label">Patients</div>
     <div class="value" data-count="{{ o.patients }}">{{ '{:,}'.format(o.patients) }}</div>
-    <div class="hint">{{ o.active_patients }} active · {{ o.patients - o.active_patients }} deceased</div>
+    <div class="hint">{{ o.active_patients }} active · {{ o.patients - o.active_patients }} deceased{% if o.without_diabetes %} · {{ o.without_diabetes }} without diabetes{% endif %}</div>
   </div>
   <div class="card stat hover reveal" style="--i: 3">
     <span class="glyph">{{ icon('dna') }}</span>
@@ -103,6 +103,18 @@
         <p class="muted" style="margin: 0">No treatment advice in force.</p>
       {% endfor %}
     </div>
+    {% if o.without_diabetes %}
+    <div class="section-head" style="margin-top: 28px"><h2>Genetic risk in relatives</h2>
+      <a class="small" href="{{ url_for('patients.index', group='no_diabetes') }}">{{ o.without_diabetes }} people {{ icon('arrow', 'icon') }}</a></div>
+    <div class="card reveal" style="--i: 7">
+      <p class="muted small" style="margin: 0 0 6px">People without diabetes, tested because a relative has monogenic diabetes.</p>
+      {% for lv in ('high', 'mild', 'uncertain', 'normal', 'untested') if o.risk_counts.get(lv) %}
+        <div class="row" style="padding: 10px 0; {{ 'border-top: 1px solid var(--line);' if not loop.first }}">
+          {{ risk_badge(lv) }}<span class="spacer"></span><strong class="tnum">{{ o.risk_counts[lv] }}</strong>
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
   </section>
 </div>
 {% endblock %}

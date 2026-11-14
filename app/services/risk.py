@@ -58,12 +58,19 @@ class RiskLevels:
     version: int
     effective_from: dt.date | None
     labels: tuple  # ((level, label), ...)
+    meanings: tuple  # ((level, one-sentence meaning), ...)
     precedence: tuple
     assignments: tuple
     table: tuple  # (((gene, class), assignment), ...) for fast lookup
 
     def label(self, level):
         return dict(self.labels)[level]
+
+    def meaning(self, level):
+        return dict(self.meanings)[level]
+
+    def assignment(self, code):
+        return next((a for a in self.assignments if a.code == code), None)
 
     def lookup(self, gene, classification):
         return dict(self.table).get((gene, classification))
@@ -92,6 +99,9 @@ def parse_risk_levels(data):
         _fail(f"precedence must list each of {LEVELS} once")
     if precedence[-1] != "normal":
         _fail("normal must be the least serious level")
+    for lv in LEVELS:
+        if not isinstance(levels[lv], dict) or not str(levels[lv].get("label", "")).strip():
+            _fail(f"level {lv} needs a label")
 
     assignments, table = [], {}
     for a in data.get("assignments") or []:
@@ -136,6 +146,7 @@ def parse_risk_levels(data):
         version=data["version"],
         effective_from=eff if isinstance(eff, dt.date) else None,
         labels=tuple((lv, levels[lv]["label"]) for lv in LEVELS),
+        meanings=tuple((lv, " ".join(str(levels[lv].get("meaning", "")).split())) for lv in LEVELS),
         precedence=tuple(precedence),
         assignments=tuple(assignments),
         table=tuple(table.items()),

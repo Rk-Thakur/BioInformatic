@@ -27,6 +27,9 @@ class Overview:
     run_notes: dict = field(default_factory=dict)
     by_rule: list = field(default_factory=list)  # [(rule code, open treatment alerts)]
     recent: list = field(default_factory=list)  # newest unreviewed high-priority items
+    # Stage 7: people without diabetes by genetic risk level (incl. "untested").
+    without_diabetes: int = 0
+    risk_counts: dict = field(default_factory=dict)
 
 
 def unreviewed_count(session):
@@ -91,4 +94,13 @@ def overview(session):
             .limit(4)
         )
     )
+    from app.services.patient_view import risk_levels_for
+
+    healthy = list(session.scalars(select(Patient.id).where(~Patient.has_diabetes)))
+    o.without_diabetes = len(healthy)
+    levels = risk_levels_for(session, healthy)
+    o.risk_counts = {
+        lv: sum(v == lv for v in levels.values())
+        for lv in ("high", "mild", "uncertain", "normal", "untested")
+    }
     return o

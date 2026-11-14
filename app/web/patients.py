@@ -24,13 +24,21 @@ from app.genes import load_genes_cached
 from app.models import Alert, Diagnosis, Medication, Patient, audit
 from app.services.fhir_export import patient_bundle
 from app.services.knowledge_import import current_release
-from app.services.patient_view import patient_alerts, patient_uploads, patient_variants
+from app.services.patient_view import (
+    family,
+    patient_alerts,
+    patient_uploads,
+    patient_variants,
+    risk_levels_for,
+    risk_summary,
+)
 from app.services.workflow import NoCurrentReleaseError, evaluate_and_apply, process_upload
 from app.web.forms import EmptyForm, MedicationForm, PatientForm, UploadForm
 from app.web.security import ANY_ROLE, CLINICAL, roles_required
 
 bp = Blueprint("patients", __name__, url_prefix="/patients")
 PAGE_SIZE = 50
+GROUPS = {"diabetes": Patient.has_diabetes, "no_diabetes": ~Patient.has_diabetes}
 
 
 def as_of():
@@ -49,11 +57,18 @@ def genes():
 @roles_required(*ANY_ROLE)
 def index():
     q = (request.args.get("q") or "").strip()
+    group = request.args.get("group") if request.args.get("group") in GROUPS else ""
     page = max(1, request.args.get("page", 1, type=int))
     stmt = select(Patient)
     if q:
         like = f"%{q}%"
         stmt = stmt.where(or_(Patient.name.ilike(like), Patient.external_id.ilike(like)))
+    group_counts = {
+        g: db.session.scalar(select(func.count()).select_from(stmt.where(cond).subquery()))
+        for g, cond in GROUPS.items()
+    }
+    if group:
+        stmt = stmt.where(GROUPS[group])
     total = db.session.scalar(select(func.count()).select_from(stmt.subquery()))
     patients = db.session.scalars(
         stmt.order_by(Patient.name).limit(PAGE_SIZE).offset((page - 1) * PAGE_SIZE)
@@ -71,10 +86,18 @@ def index():
             .group_by(Alert.patient_id)
         )
         open_counts = dict(rows.all())
+    risk_levels = (
+        risk_levels_for(db.session, [p.id for p in patients])
+        if current_user.can_view_recommendations()
+        else {}
+    )
     return render_template(
         "patients/index.html",
         patients=patients,
         q=q,
+        group=group,
+        group_counts=group_counts,
+        risk_levels=risk_levels,
         page=page,
         pages=max(1, -(-total // PAGE_SIZE)),
         total=total,
@@ -91,19 +114,47 @@ def new():
         if db.session.scalar(select(Patient).where(Patient.external_id == ext)):
             form.external_id.errors.append("A patient with this ID already exists.")
             return render_template("patients/new.html", form=form), 400
+        relative_of = None
+        rel_ext = (form.relative_of.data or "").strip()
+        if rel_ext:
+            relative_of = db.session.scalar(select(Patient).where(Patient.external_id == rel_ext))
+            matches = (
+                [relative_of]
+                if relative_of
+                else db.session.scalars(
+                    select(Patient).where(Patient.external_id.startswith(rel_ext)).limit(2)
+                ).all()
+            )
+            relative_of = matches[0] if len(matches) == 1 else None
+            if len(matches) > 1:
+                form.relative_of.errors.append(
+                    "More than one patient matches; give more of the ID."
+                )
+            elif relative_of is None:
+                form.relative_of.errors.append("No patient with this ID.")
+            elif not form.relation.data:
+                form.relation.errors.append("Choose how they are related.")
+            if form.relative_of.errors or form.relation.errors:
+                return render_template("patients/new.html", form=form), 400
+        no_diabetes = form.diabetes_type.data == "none"
         p = Patient(
             external_id=ext,
             name=form.name.data.strip(),
             sex=form.sex.data or None,
             birth_date=form.birth_date.data,
+            has_diabetes=not no_diabetes,
+            relative_of=relative_of,
+            relation=(form.relation.data or None) if relative_of else None,
+            family_id=relative_of.family_id if relative_of else None,
         )
         years = form.age_at_diagnosis_years.data
-        p.diagnoses.append(
-            Diagnosis(
-                diabetes_type=form.diabetes_type.data,
-                age_at_diagnosis_months=float(years) * 12 if years is not None else None,
+        if not no_diabetes:
+            p.diagnoses.append(
+                Diagnosis(
+                    diabetes_type=form.diabetes_type.data,
+                    age_at_diagnosis_months=float(years) * 12 if years is not None else None,
+                )
             )
-        )
         db.session.add(p)
         db.session.flush()
         audit(db.session, "patient_created", "patient", p.id, user_id=current_user.id)
@@ -124,6 +175,8 @@ def detail(patient_id):
     )
     clinical = current_user.can_view_recommendations()
     open_alerts, past_alerts = patient_alerts(db.session, p) if clinical else ([], [])
+    risk = risk_summary(db.session, p, open_alerts) if clinical else None
+    relatives = family(db.session, p)
     meds = sorted(p.medications, key=lambda m: (m.stop is not None, m.start), reverse=False)
     return render_template(
         "patients/detail.html",
@@ -135,6 +188,8 @@ def detail(patient_id):
         clinical=clinical,
         open_alerts=open_alerts,
         past_alerts=past_alerts,
+        risk=risk,
+        relatives=relatives,
         meds=meds,
         as_of=as_of(),
         therapy=sorted(p.current_therapy(as_of())),

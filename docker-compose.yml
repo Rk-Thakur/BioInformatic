@@ -20,6 +20,8 @@ services:
       # Remove this line if you put the app behind HTTPS.
       SESSION_COOKIE_SECURE: "0"
       SEED_PATIENTS: "1"
+      # Stage 7: 24 healthy relatives with a genetic risk level ("0" = leave them out).
+      SEED_RELATIVES: "1"
       # Start from ClinVar 2023-01-07 and re-evaluate to 2026-10-19, so the app shows
       # reclassified alerts and review notices. Set to "" to stay on 2023-01-07.
       REEVALUATE_TO: "2026-10-19"
