@@ -335,6 +335,42 @@ def seed_synthea_cmd(cohort):
     )
 
 
+@click.command("seed-relatives")
+@click.option(
+    "--dir",
+    "relatives_dir",
+    default="ge_ehr_healthy_relatives",
+    show_default=True,
+    type=click.Path(exists=True, file_okay=False),
+)
+def seed_relatives_cmd(relatives_dir):
+    """Stage 7: load the healthy relatives (no diabetes) and upload their gene tests.
+
+    Run after `flask seed-synthea`: every relative is linked to a cohort patient.
+    """
+    from app.genes import load_genes
+    from app.services.seed import seed_relatives
+    from app.services.workflow import NoCurrentReleaseError
+
+    genes = load_genes(Path(current_app.config["DATA_CURATED_DIR"]) / "panel_genes.tsv")
+    try:
+        r = seed_relatives(db.session, relatives_dir, genes, _as_of())
+        db.session.commit()
+    except NoCurrentReleaseError as exc:
+        db.session.rollback()
+        raise click.ClickException(str(exc)) from exc
+    click.echo(
+        f"Healthy relatives: {r.created} created, {r.skipped} already present, "
+        f"{r.rejected_uploads} rejected uploads"
+    )
+    if r.missing_proband:
+        click.echo(
+            f"{len(r.missing_proband)} skipped because their family's patient is not loaded: "
+            "run `flask seed-synthea` first",
+            err=True,
+        )
+
+
 COMMANDS = (
     init_db,
     show_config,
@@ -351,6 +387,7 @@ COMMANDS = (
     runs_cmd,
     seed_cohort_cmd,
     seed_synthea_cmd,
+    seed_relatives_cmd,
 )
 
 

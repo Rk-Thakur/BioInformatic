@@ -32,6 +32,9 @@ class PatientFacts:
     age_at_diagnosis_months: float | None = None
     pregnant: bool = False
     active: bool = True  # False for deceased patients (C14): no new alerts
+    # Stage 7 (DD44): treatment rules D1-D6 are for people with diabetes only; people
+    # without diabetes get a genetic risk level instead.
+    has_diabetes: bool = True
 
 
 @dataclass(frozen=True)
@@ -112,7 +115,7 @@ def _extra_ok(extra, facts):
 
 def evaluate(facts, variants, rules):
     """Algorithm 1 for one patient. Returns a list of Outcome (no side effects)."""
-    if not facts.active:
+    if not facts.active or not facts.has_diabetes:
         return []
     outcomes = []
     for rule in rules:
@@ -187,6 +190,7 @@ def patient_facts(patient, as_of):
         age_at_diagnosis_months=dx.age_at_diagnosis_months if dx else None,
         pregnant=patient.is_pregnant_on(as_of),
         active=patient.is_active,
+        has_diabetes=patient.has_diabetes is not False,  # None before the first flush
     )
 
 

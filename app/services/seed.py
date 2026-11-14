@@ -14,7 +14,7 @@ infant onset).
 
 import csv
 import datetime as dt
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from sqlalchemy import select
@@ -220,6 +220,56 @@ def _apply_overrides(patient, scen, as_of):
             patient.diagnoses.append(
                 Diagnosis(diabetes_type="unknown", age_at_diagnosis_months=months)
             )
+
+
+# --------------------------------------------------------------------------- relatives
+
+
+@dataclass
+class RelativesSeedResult:
+    created: int = 0
+    skipped: int = 0
+    missing_proband: list = field(default_factory=list)
+    rejected_uploads: int = 0
+
+
+def seed_relatives(session, relatives_dir, genes, as_of):
+    """Stage 7 (DD43, DD44): load the healthy relatives and upload their gene tests.
+
+    Each person is created without diabetes (`has_diabetes=False`, no diagnosis, no
+    medication) and linked to the cohort patient they are related to, which must
+    already be loaded (`flask seed-synthea` or `seed-cohort`). Relatives whose patient
+    is missing are reported, not created. People that already exist are skipped.
+    """
+    relatives_dir = Path(relatives_dir)
+    result = RelativesSeedResult()
+    for r in _read_csv(relatives_dir / "relatives.csv"):
+        rid = r["relative_id"]
+        if session.scalar(select(Patient).where(Patient.external_id == rid)):
+            result.skipped += 1
+            continue
+        proband = session.scalar(select(Patient).where(Patient.external_id == r["proband_id"]))
+        if proband is None:
+            result.missing_proband.append(rid)
+            continue
+        p = Patient(
+            external_id=rid,
+            name=r["name"],
+            sex=r["sex"] or None,
+            birth_date=_date(r["birth_date"]),
+            family_id=proband.family_id,
+            has_diabetes=False,
+            relative_of=proband,
+            relation=r["relation"],
+        )
+        session.add(p)
+        session.flush()
+        upload, _ = process_upload(
+            session, p, relatives_dir / "vcfs" / f"{rid}.vcf.gz", genes, as_of
+        )
+        result.created += 1
+        result.rejected_uploads += upload.status != "accepted"
+    return result
 
 
 # --------------------------------------------------------------------------- scale cohort

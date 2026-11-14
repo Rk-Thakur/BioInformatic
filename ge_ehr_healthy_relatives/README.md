@@ -10,6 +10,12 @@ Rebuild (deterministic, same bytes every time):
 python -m scripts.build_healthy_relatives
 ```
 
+Load into the app (after `flask seed-synthea`, which loads their families):
+
+```bash
+flask seed-relatives
+```
+
 ## Files
 
 | File | Contents |
