@@ -67,7 +67,9 @@ def point_in_time(session, as_of):
         key = (a.patient_id, a.release_id, a.rule_id)
         if key not in cache:
             patient = session.get(Patient, a.patient_id)
-            outs = evaluate_patient(session, patient, a.release, as_of, rules=[RuleSpec.of(a.rule)])
+            # Risk findings (Stage 7) have no Rule row; they come from the risk levels.
+            rules = [RuleSpec.of(a.rule)] if a.rule is not None else []
+            outs = evaluate_patient(session, patient, a.release, as_of, rules=rules)
             cache[key] = {(o.patient_variant_id, o.rule_code, o.kind, o.severity) for o in outs}
         ok += (a.patient_variant_id, a.rule_code, a.kind, a.severity) in cache[key]
     return ratio(ok, len(alerts)), len(alerts)

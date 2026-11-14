@@ -32,6 +32,7 @@ from app.models import Alert, KbRelease, Patient, PatientVariant, ReevaluationRu
 from app.models.base import OPEN_STATUSES, RUN_MODES, utcnow
 from app.services.classify import classify_keys
 from app.services.knowledge_import import current_release
+from app.services.risk import current_risk_levels
 from app.services.rule_engine import apply_outcomes, current_rules, evaluate_patient
 
 
@@ -84,6 +85,18 @@ def _review_notice(session, patient, pv_id, superseded, reason, release, run):
     order = {"high": 0, "medium": 1, "low": 2, "info": 3}
     main = min(superseded, key=lambda a: order[a.severity])
     rules = ", ".join(sorted({a.rule_code for a in superseded}))
+    if all(a.rule_code.startswith("G") for a in superseded):  # risk findings (DD45)
+        what = (
+            f"The genetic risk finding ({rules}) no longer applies and was superseded. "
+            "Please review any follow-up arranged because of it (for example glucose "
+            "monitoring) and inform the person."
+        )
+    else:
+        what = (
+            f"The recommendation(s) from rule {rules} no longer apply and were "
+            "superseded. Please review any treatment change made because of them. "
+            "GE-EHR never changes therapy automatically."
+        )
     notice = Alert(
         patient_id=patient.id,
         patient_variant_id=pv_id,
@@ -96,11 +109,7 @@ def _review_notice(session, patient, pv_id, superseded, reason, release, run):
         reclassified=True,
         supersedes_id=main.id,
         created_by_run_id=run.id,
-        message=(
-            f"{reason} The recommendation(s) from rule {rules} no longer apply and were "
-            "superseded. Please review any treatment change made because of them. "
-            "GE-EHR never changes therapy automatically."
-        ),
+        message=f"{reason} {what}",
     )
     session.add(notice)
     return notice
@@ -208,28 +217,37 @@ def reevaluate_release(session, new_version, as_of, *, mode="change_driven"):
         changed_by_key = {c.key: c for c in changes}
         rules = current_rules(session)
         carrier_ids = sorted({pid for c in changes for pid in c.carriers})
+        risk = current_risk_levels()
         pv_rows = (
             session.execute(
                 select(
                     PatientVariant.id,
                     PatientVariant.patient_id,
+                    Patient.has_diabetes,
                     PatientVariant.gene,
                     PatientVariant.chrom,
                     PatientVariant.pos,
                     PatientVariant.ref,
                     PatientVariant.alt,
-                ).where(PatientVariant.patient_id.in_(carrier_ids))
+                )
+                .join(Patient, Patient.id == PatientVariant.patient_id)
+                .where(PatientVariant.patient_id.in_(carrier_ids))
             ).all()
             if carrier_ids
             else []
         )
         upgraded, downgraded, relevant = {}, {}, set()
         n_relevant = set()
-        for pv_id, pid, gene, *key in pv_rows:
+        for pv_id, pid, has_diabetes, gene, *key in pv_rows:
             c = changed_by_key.get(tuple(key))
             if c is None:
                 continue
-            if not rule_relevant(rules, gene, c.old, c.new):
+            # Patients with diabetes: treatment rules (DD23). People without diabetes:
+            # only a change that moves the variant to another risk level (DD45).
+            if has_diabetes:
+                if not rule_relevant(rules, gene, c.old, c.new):
+                    continue
+            elif not risk.changes_level(gene, c.old, c.new):
                 continue
             relevant.add(pid)
             n_relevant.add(c.key)
@@ -322,7 +340,8 @@ def reevaluate_rule(session, code, version, as_of, *, mode="change_driven"):
     }
     if mode != "alert_once":
         if mode == "full":
-            patient_ids = list(session.scalars(select(Patient.id)))
+            # Treatment rules never apply to people without diabetes (DD44).
+            patient_ids = list(session.scalars(select(Patient.id).where(Patient.has_diabetes)))
         else:
             # Only carriers of a variant the old or the new version could match (DD23):
             # a benign variant in the rule's genes cannot change the rule's outcome.
@@ -336,7 +355,9 @@ def reevaluate_rule(session, code, version, as_of, *, mode="change_driven"):
                     PatientVariant.pos,
                     PatientVariant.ref,
                     PatientVariant.alt,
-                ).where(PatientVariant.gene.in_(genes))
+                )
+                .join(Patient, Patient.id == PatientVariant.patient_id)
+                .where(PatientVariant.gene.in_(genes), Patient.has_diabetes)
             ).all()
             classified = classify_keys(session, [tuple(r[1:]) for r in rows], release)
             patient_ids = sorted(

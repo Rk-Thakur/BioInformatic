@@ -12,6 +12,11 @@
 #      Lower-level findings are still listed (e.g. a VUS shown as "monitored").
 #   4. No variant in the panel genes, or only benign / not-classified ones -> normal.
 #
+# In the app (Stage 7 step 4) each finding becomes an alert on the person's record:
+#   high -> alert, severity high;  mild -> alert, severity low;
+#   uncertain -> info note;        normal -> nothing (no finding to show).
+# pregnancy_note is per gene and is added for women only.
+#
 # Levels are categories, not percentages: we show no penetrance figure we cannot cite
 # for every gene. Advice is advisory only and always includes genetic counselling.
 #
@@ -61,9 +66,10 @@ assignments:
       High risk of developing diabetes, usually in adolescence or early adulthood.
       Arrange regular blood-glucose checks (interval set by the clinician) and genetic
       counselling. If diabetes develops, low-dose sulfonylurea is often effective.
-    pregnancy_note: >-
-      HNF4A: tell the obstetric team; the baby may be large and have low blood sugar
-      after birth.
+    pregnancy_note:
+      HNF4A: >-
+        In pregnancy, tell the obstetric team: the baby may be large and have low blood
+        sugar after birth.
     source: "[1, 7]; ISPAD 2018 [check]"
 
   - code: G2
@@ -94,9 +100,10 @@ assignments:
       Lifelong mild, stable raised fasting blood sugar from birth. Usually needs no
       treatment and carries a low risk of complications. Record the result so it is not
       mistaken for type 1 or type 2 diabetes later. Genetic counselling.
-    pregnancy_note: >-
-      Tell the obstetric team: management in pregnancy depends on whether the baby
-      carries the variant.
+    pregnancy_note:
+      GCK: >-
+        In pregnancy, tell the obstetric team: management depends on whether the baby
+        carries the variant.
     source: "[1]; Steele 2014 [check]"
 
   - code: G5

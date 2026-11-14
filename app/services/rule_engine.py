@@ -20,6 +20,7 @@ from app.domain import ACTIONABLE
 from app.models import Alert, AlertProvenance, CuratedFlag, PatientVariant, Rule, audit
 from app.models.base import OPEN_STATUSES, utcnow
 from app.services.classify import classify_keys
+from app.services.risk import current_risk_levels, risk_findings
 
 # DD15: rules whose recommendation does not hold in pregnancy.
 PREGNANCY_CAVEAT_RULES = {"D1"}
@@ -35,6 +36,7 @@ class PatientFacts:
     # Stage 7 (DD44): treatment rules D1-D6 are for people with diabetes only; people
     # without diabetes get a genetic risk level instead.
     has_diabetes: bool = True
+    sex: str | None = None  # Stage 7: pregnancy notes on risk findings are for women
 
 
 @dataclass(frozen=True)
@@ -113,10 +115,21 @@ def _extra_ok(extra, facts):
     return None
 
 
-def evaluate(facts, variants, rules):
-    """Algorithm 1 for one patient. Returns a list of Outcome (no side effects)."""
-    if not facts.active or not facts.has_diabetes:
+def evaluate(facts, variants, rules, risk=None):
+    """Algorithm 1 for one patient. Returns a list of Outcome (no side effects).
+
+    People without diabetes get no treatment rules; with `risk` (RiskLevels) they get
+    their genetic risk findings instead (Stage 7, DD45).
+    """
+    if not facts.active:
         return []
+    if not facts.has_diabetes:
+        if risk is None:
+            return []
+        return [
+            Outcome(v.patient_variant_id, None, a.code, kind, severity, msg, v.classification)
+            for v, a, kind, severity, msg in risk_findings(facts.sex, variants, risk)
+        ]
     outcomes = []
     for rule in rules:
         classes = set(rule.genetic["classes"])
@@ -191,6 +204,7 @@ def patient_facts(patient, as_of):
         pregnant=patient.is_pregnant_on(as_of),
         active=patient.is_active,
         has_diabetes=patient.has_diabetes is not False,  # None before the first flush
+        sex=patient.sex,
     )
 
 
@@ -227,7 +241,9 @@ def evaluate_patient(session, patient, release, as_of, rules=None):
     """Read the patient's facts from the database and run Algorithm 1."""
     variants, _ = variant_facts(session, patient, release)
     rules = rules if rules is not None else current_rules(session)
-    return evaluate(patient_facts(patient, as_of), variants, rules)
+    facts = patient_facts(patient, as_of)
+    risk = None if facts.has_diabetes else current_risk_levels()
+    return evaluate(facts, variants, rules, risk)
 
 
 @dataclass

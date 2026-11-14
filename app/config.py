@@ -33,6 +33,8 @@ class Config:
     DATA_RAW_DIR = os.environ.get("DATA_RAW_DIR", "data/raw")
     DATA_CLEAN_DIR = os.environ.get("DATA_CLEAN_DIR", "data/clean")
     DATA_CURATED_DIR = os.environ.get("DATA_CURATED_DIR", "data/curated")
+    # Stage 7 (DD45): genetic risk levels for people without diabetes, in DATA_CURATED_DIR.
+    RISK_LEVELS_FILE = os.environ.get("RISK_LEVELS_FILE", "risk_levels_v1.yaml")
 
 
 class DevelopmentConfig(Config):

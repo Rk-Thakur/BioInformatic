@@ -8,7 +8,9 @@ from sqlalchemy import func, select
 from app.models import Alert, Patient, PatientVariant, ReevaluationRun
 from app.services.knowledge_import import current_release
 
-TREATMENT = (Alert.kind == "alert") & (Alert.severity != "info")
+# Treatment advice only (rules D1-D6). Genetic risk findings of people without diabetes
+# (codes G1-G5, Stage 7) are alerts too and still count as "waiting for review".
+TREATMENT = (Alert.kind == "alert") & (Alert.severity != "info") & Alert.rule_code.like("D%")
 
 
 @dataclass
@@ -34,7 +36,8 @@ def unreviewed_count(session):
         .select_from(Alert)
         .where(
             Alert.status == "active",
-            (TREATMENT) | (Alert.kind == "review_notice"),
+            ((Alert.kind == "alert") & (Alert.severity != "info"))
+            | (Alert.kind == "review_notice"),
         )
     )
 
