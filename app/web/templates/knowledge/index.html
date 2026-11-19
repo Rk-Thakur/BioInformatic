@@ -46,7 +46,18 @@
 
 {% set rl = risk_levels() %}
 <section class="section">
-  <div class="section-head"><h2>Genetic risk levels</h2><span class="muted small">v{{ rl.version }} · people without diabetes · advisory only</span></div>
+  <div class="section-head"><h2>Genetic risk levels</h2><span class="muted small">v{{ rl.version }} in force · people without diabetes · advisory only</span></div>
+  {% if risk_sets %}
+    <div class="row" style="gap: 8px; margin-bottom: 14px; flex-wrap: wrap">
+      {% for rs in risk_sets %}
+        <span class="badge {{ 'ok' if rs.is_current else 'sev-info' }}">v{{ rs.version }} · {{ 'current' if rs.is_current else ('retired' if rs.applied_at else 'pending') }}</span>
+      {% endfor %}
+      {% if risk_sets|selectattr('is_current', 'false')|rejectattr('applied_at')|list %}<span class="small muted">apply a pending version with <code>flask apply-risk-levels N</code></span>{% endif %}
+    </div>
+  {% endif %}
+  {% if rl.max_allele_frequency %}
+    <p class="small muted" style="margin: 0 0 14px">Frequency filter: a variant found in {{ '%g'|format(rl.max_allele_frequency * 100) }}% of people or more cannot make anyone {{ rl.frequency_applies_to|join(' or ') }} ({{ rl.frequency_source }}).</p>
+  {% endif %}
   <div class="grid grid-2">
     {% for a in rl.assignments %}
       <article class="card hover rule reveal" style="--i: {{ loop.index }}">

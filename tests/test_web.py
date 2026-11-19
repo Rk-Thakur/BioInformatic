@@ -477,3 +477,30 @@ def test_lab_tech_never_sees_risk(client, world, session, tmp_path):
     assert b"Rel One" in fam and b"risk-badge" not in fam
     listing = client.get("/patients/?group=no_diabetes").data
     assert b"Rel One" in listing and b"Genetic risk" not in listing and b"risk-badge" not in listing
+
+
+def test_family_tree_on_both_pages(client, world, session, tmp_path):
+    from tests.test_reevaluate import A
+
+    login(client, "clinician")
+    add_relative(client, world)
+    rel = db.session.scalar(select(Patient).where(Patient.name == "Rel One"))
+    upload(client, rel.id, [A], tmp_path)
+    reevaluate_release(session, "2026-10-19", AS_OF)
+    session.commit()
+
+    for pid in (world["fam1"].id, rel.id):
+        page = client.get(f"/patients/{pid}").data
+        assert b"data-pedigree" in page and b'class="ped-svg"' in page
+        assert b'data-release="2023-01-07"' in page and b"Replay history" in page
+        assert b"ped-ring risk-high" in page  # current release: the relative is high risk
+        assert b"Jan 2023" in page and b"Oct 2026" in page
+    # without relatives there is no tree
+    assert b"data-pedigree" not in client.get(f"/patients/{world['gck'].id}").data
+
+    client.post("/logout")
+    login(client, "lab_tech")
+    page = client.get(f"/patients/{world['fam1'].id}").data
+    assert b'class="ped-svg"' in page  # the tree itself: yes
+    assert b"ped-ring" not in page and b"data-release" not in page  # risk: never
+    assert b"ring = genetic risk" not in page

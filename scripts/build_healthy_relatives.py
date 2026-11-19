@@ -12,10 +12,11 @@ Genome model (simplified Mendelian, documented in DD43):
   inserted ClinVar variant (0/1). This is a demo, not a pedigree simulator: siblings
   are modelled the same way as parents and children (about half shared).
 
-Expected risk levels are computed here for every cleaned ClinVar release, using the
-same precedence as the app (ClinGen expert classification approved on or before the
-release date, else ClinVar, else "not classified") and the levels in
-data/curated/risk_levels_v1.yaml. Step 6 checks the app against expected_risk.csv.
+Expected risk levels are computed here for every cleaned ClinVar release and every risk
+levels version (data/curated/risk_levels_v*.yaml), using the same precedence as the app
+(ClinGen expert classification approved on or before the release date, else ClinVar,
+else "not classified") and, from v2, the population-frequency filter (DD47). The tests
+check the app against expected_risk.csv.
 
 Usage:
   python -m scripts.build_healthy_relatives            # writes ge_ehr_healthy_relatives/
@@ -42,7 +43,7 @@ from app.domain import NOT_CLASSIFIED, PANEL_GENES, expert_as_of  # noqa: E402
 
 COHORT = ROOT / "ge_ehr_test_data_v2"
 CLEAN = ROOT / "data" / "clean"
-LEVELS = ROOT / "data" / "curated" / "risk_levels_v1.yaml"
+LEVELS = ROOT / "data" / "curated"  # risk_levels_v*.yaml
 OUT = ROOT / "ge_ehr_healthy_relatives"
 AS_OF = dt.date(2026, 11, 14)
 NAMESPACE = uuid.UUID("6f1c2a52-7d1e-4b5e-9a39-2b7f0d9c4e11")
@@ -112,7 +113,7 @@ def rng_for(*parts):
 
 
 def load_releases(clean):
-    """{release date: {key: (gene, classification, clinvar_id)}} from the cleaned panels."""
+    """{release date: {key: (gene, classification, clinvar_id, allele frequency)}}."""
     out = {}
     for f in sorted(clean.glob("clinvar_*.panel.tsv")):
         d = f.stem.split("_")[1].split(".")[0]
@@ -124,6 +125,7 @@ def load_releases(clean):
                     r["gene"],
                     r["classification"],
                     r["clinvar_id"],
+                    float(r["allele_frequency"]) if r.get("allele_frequency") else None,
                 )
                 for r in rows
             }
@@ -145,30 +147,42 @@ def load_experts(clean):
 
 
 def classify(key, release_date, release, experts):
-    """(gene, classification) with the app's precedence (classify.py, DD6)."""
+    """(gene, classification, allele frequency) with the app's precedence (DD6)."""
     hit = release.get(key)
     if hit is None:
-        return None, NOT_CLASSIFIED
-    gene, cls, cid = hit
+        return None, NOT_CLASSIFIED, None
+    gene, cls, cid, af = hit
     expert = expert_as_of(experts.get(cid, []), release_date)
-    return gene, (expert["classification"] if expert else cls)
+    return gene, (expert["classification"] if expert else cls), af
 
 
 def load_levels(path):
+    """One risk levels file -> (version, precedence, {(gene, class): (level, code)},
+    frequency threshold or None, levels the threshold applies to)."""
     spec = yaml.safe_load(Path(path).read_text())
     table = {}
     for a in spec["assignments"]:
         for g in a["genes"]:
             for c in a["classes"]:
                 table[(g, c)] = (a["level"], a["code"])
-    return spec["precedence"], table
+    freq = spec.get("frequency_filter") or {}
+    return (
+        spec["version"],
+        spec["precedence"],
+        table,
+        freq.get("max_allele_frequency"),
+        tuple(freq.get("applies_to", ())),
+    )
 
 
-def risk_level(findings, precedence, table):
-    """findings: [(gene, classification, key)] -> (level, code, gene, class, key)."""
-    best = ("normal", "G6", "", "", "")
-    for gene, cls, key in findings:
+def risk_level(findings, levels):
+    """findings: [(gene, classification, af, key)] -> (level, code, gene, class, key)."""
+    _, precedence, table, threshold, applies = levels
+    best = ("normal", "", "", "", "")
+    for gene, cls, af, key in findings:
         level, code = table[(gene, cls)]
+        if threshold is not None and af is not None and af >= threshold and level in applies:
+            continue  # common variant: cannot raise risk (BA1)
         if precedence.index(level) < precedence.index(best[0]):
             best = (level, code, gene, cls, ":".join(key))
     return best
@@ -204,7 +218,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--cohort", default=COHORT, type=Path)
     ap.add_argument("--clean", default=CLEAN, type=Path)
-    ap.add_argument("--levels", default=LEVELS, type=Path)
+    ap.add_argument("--levels", default=LEVELS, type=Path, help="folder with risk_levels_v*.yaml")
     ap.add_argument("--out", default=OUT, type=Path)
     args = ap.parse_args(argv)
     return build(args.cohort, args.clean, args.levels, args.out)
@@ -228,7 +242,8 @@ def build(cohort, clean, levels_path, out):
 
     releases = load_releases(clean)
     experts = load_experts(clean)
-    precedence, table = load_levels(levels_path)
+    level_sets = [load_levels(f) for f in sorted(Path(levels_path).glob("risk_levels_v*.yaml"))]
+    level_sets.sort(key=lambda x: x[0])
 
     (out / "vcfs").mkdir(parents=True, exist_ok=True)
     people, expected = [], []
@@ -290,24 +305,34 @@ def build(cohort, clean, levels_path, out):
         for date, release in releases.items():
             findings = []
             for key in keys:
-                gene, cls = classify(key, date, release, experts)
+                gene, cls, af = classify(key, date, release, experts)
                 if gene in PANEL_GENES:
-                    findings.append((gene, cls, key))
-            level, code, gene, cls, key = risk_level(findings, precedence, table)
-            expected.append(
-                {
-                    "relative_id": rid,
-                    "release": date.isoformat(),
-                    "level": level,
-                    "code": code,
-                    "deciding_gene": gene,
-                    "deciding_class": cls,
-                    "deciding_variant": key,
-                    "uncertain_findings": sum(
-                        table[(g, c)][0] == "uncertain" for g, c, _ in findings
-                    ),
-                }
-            )
+                    findings.append((gene, cls, af, key))
+            for levels in level_sets:
+                level, code, gene, cls, key = risk_level(findings, levels)
+                version, _, table, threshold, applies = levels
+                expected.append(
+                    {
+                        "relative_id": rid,
+                        "risk_levels_version": version,
+                        "release": date.isoformat(),
+                        "level": level,
+                        "code": code,
+                        "deciding_gene": gene,
+                        "deciding_class": cls,
+                        "deciding_variant": key,
+                        "uncertain_findings": sum(
+                            table[(g, c)][0] == "uncertain"
+                            and not (
+                                threshold is not None
+                                and f is not None
+                                and f >= threshold
+                                and "uncertain" in applies
+                            )
+                            for g, c, f, _ in findings
+                        ),
+                    }
+                )
 
     write_csv(out / "relatives.csv", people)
     write_csv(out / "expected_risk.csv", expected)
@@ -317,15 +342,20 @@ def build(cohort, clean, levels_path, out):
         "families": len({p["proband_id"] for p in people}),
         "releases": [d.isoformat() for d in releases],
         "levels": {
-            d.isoformat(): {
-                lv: sum(e["level"] == lv for e in expected if e["release"] == d.isoformat())
-                for lv in precedence
+            f"v{v}": {
+                d.isoformat(): {
+                    lv: sum(
+                        e["level"] == lv
+                        for e in expected
+                        if e["release"] == d.isoformat() and e["risk_levels_version"] == v
+                    )
+                    for lv in ("high", "mild", "uncertain", "normal")
+                }
+                for d in releases
             }
-            for d in releases
+            for v, *_ in level_sets
         },
-        "risk_levels_file": str(Path(levels_path).relative_to(ROOT))
-        if Path(levels_path).is_relative_to(ROOT)
-        else str(levels_path),
+        "risk_levels_versions": [v for v, *_ in level_sets],
         "note": "Synthetic demo data (DD43): 1000 Genomes backgrounds recombined per "
         "chromosome, family variants from ge_ehr_test_data_v2. Not real people.",
     }

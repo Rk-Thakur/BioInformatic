@@ -54,10 +54,18 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "1") != "0"
     REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
 
+    # When SECRET_KEY is not in the environment, read it from this file in the instance
+    # folder. The Docker entrypoint generates it once, so `docker compose exec web flask
+    # ...` commands work too, not only the web server it starts.
+    SECRET_KEY_FILE = "secret_key"
+
     @classmethod
-    def validate(cls):
-        if cls.SECRET_KEY == _DEV_SECRET:
-            raise RuntimeError("SECRET_KEY must be set in production")
+    def validate(cls, config):
+        if config["SECRET_KEY"] == _DEV_SECRET:
+            raise RuntimeError(
+                "SECRET_KEY must be set in production (environment variable, or the file "
+                "instance/secret_key)"
+            )
 
 
 CONFIGS = {

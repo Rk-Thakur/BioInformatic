@@ -1,7 +1,13 @@
-"""Stage 7: genetic risk for people without diabetes (DD42, DD45).
+"""Stage 7: genetic risk for people without diabetes (DD42, DD45, DD47).
 
-The levels are data (`data/curated/risk_levels_v1.yaml`), validated here as strictly as
+The levels are data (`data/curated/risk_levels_vN.yaml`), validated here as strictly as
 the treatment rules: every panel gene x classification must map to exactly one level.
+They are versioned in the database (RiskLevelSet): one version is current, later ones
+wait as pending until `flask apply-risk-levels` re-evaluates the people they affect.
+
+Optional frequency filter (v2): a variant whose population allele frequency is at or
+above `max_allele_frequency` is common, so it cannot raise anyone's risk (ACMG/AMP BA1);
+it applies to the levels listed in `applies_to` (normally only "uncertain").
 
 Each variant of a person without diabetes that maps to a level other than "normal"
 becomes one finding, which the rule engine returns as an outcome with rule code G1..G5.
@@ -62,6 +68,25 @@ class RiskLevels:
     precedence: tuple
     assignments: tuple
     table: tuple  # (((gene, class), assignment), ...) for fast lookup
+    max_allele_frequency: float | None = None  # frequency filter (None = off)
+    frequency_applies_to: tuple = ()
+    frequency_source: str = ""
+
+    def is_common(self, assignment, allele_frequency):
+        """True when the frequency filter turns this finding off (BA1)."""
+        return (
+            self.max_allele_frequency is not None
+            and allele_frequency is not None
+            and allele_frequency >= self.max_allele_frequency
+            and assignment.level in self.frequency_applies_to
+        )
+
+    def finding(self, gene, classification, allele_frequency=None):
+        """The assignment a variant produces a finding from, or None (normal)."""
+        a = self.lookup(gene, classification)
+        if a is None or a.level == "normal" or self.is_common(a, allele_frequency):
+            return None
+        return a
 
     def label(self, level):
         return dict(self.labels)[level]
@@ -75,10 +100,11 @@ class RiskLevels:
     def lookup(self, gene, classification):
         return dict(self.table).get((gene, classification))
 
-    def changes_level(self, gene, old, new):
+    def changes_level(self, gene, old, new, allele_frequency=None):
         """Can a change old -> new in `gene` change a finding? (DD23 for risk)"""
-        a, b = self.lookup(gene, old), self.lookup(gene, new)
-        return (a.level if a else "normal") != (b.level if b else "normal")
+        a = self.finding(gene, old, allele_frequency)
+        b = self.finding(gene, new, allele_frequency)
+        return (a.code if a else None) != (b.code if b else None)
 
 
 def _fail(msg):
@@ -141,6 +167,27 @@ def parse_risk_levels(data):
     missing = [(g, c) for g in PANEL_GENES for c in CLASSIFICATIONS if (g, c) not in table]
     if missing:
         _fail(f"no level for {missing[:5]}{' ...' if len(missing) > 5 else ''}")
+    freq = data.get("frequency_filter")
+    threshold, applies, fsource = None, (), ""
+    if freq is not None:
+        if not isinstance(freq, dict) or set(freq) - {
+            "max_allele_frequency",
+            "applies_to",
+            "source",
+        }:
+            _fail("frequency_filter may only contain max_allele_frequency, applies_to, source")
+        threshold = freq.get("max_allele_frequency")
+        if not isinstance(threshold, int | float) or isinstance(threshold, bool):
+            _fail("frequency_filter.max_allele_frequency must be a number")
+        if not 0 < threshold <= 1:
+            _fail("frequency_filter.max_allele_frequency must be in (0, 1]")
+        applies = freq.get("applies_to")
+        if not isinstance(applies, list) or not applies or set(applies) - set(LEVELS[:-1]):
+            _fail(f"frequency_filter.applies_to must list levels from {LEVELS[:-1]}")
+        fsource = str(freq.get("source", "")).strip()
+        if not fsource:
+            _fail("frequency_filter.source is required")
+        threshold, applies = float(threshold), tuple(applies)
     eff = data.get("effective_from")
     return RiskLevels(
         version=data["version"],
@@ -150,18 +197,34 @@ def parse_risk_levels(data):
         precedence=tuple(precedence),
         assignments=tuple(assignments),
         table=tuple(table.items()),
+        max_allele_frequency=threshold,
+        frequency_applies_to=applies,
+        frequency_source=fsource,
     )
 
 
-@lru_cache(maxsize=8)
+@lru_cache(maxsize=16)
+def parse_risk_levels_text(text):
+    return parse_risk_levels(yaml.safe_load(text))
+
+
 def load_risk_levels(path):
-    return parse_risk_levels(yaml.safe_load(Path(path).read_text()))
+    return parse_risk_levels_text(Path(path).read_text())
 
 
 def current_risk_levels():
-    """The risk levels in force (config RISK_LEVELS_FILE inside DATA_CURATED_DIR)."""
+    """The risk levels in force: the current RiskLevelSet in the database, or, when
+    none has been imported yet (e.g. a bare test database), the file named by config
+    RISK_LEVELS_FILE in DATA_CURATED_DIR."""
     from flask import current_app
+    from sqlalchemy import select
 
+    from app.extensions import db
+    from app.models import RiskLevelSet
+
+    content = db.session.scalar(select(RiskLevelSet.content).where(RiskLevelSet.is_current))
+    if content is not None:
+        return parse_risk_levels_text(content)
     cfg = current_app.config
     return load_risk_levels(str(Path(cfg["DATA_CURATED_DIR"]) / cfg["RISK_LEVELS_FILE"]))
 
@@ -169,12 +232,12 @@ def current_risk_levels():
 def risk_findings(sex, variants, risk):
     """[(variant, assignment, kind, severity, message)] for one person without diabetes.
 
-    variants: VariantFacts (gene, classification, label). Pure function.
+    variants: VariantFacts (gene, classification, frequency, label). Pure function.
     """
     out = []
     for v in variants:
-        a = risk.lookup(v.gene, v.classification)
-        if a is None or a.level == "normal":
+        a = risk.finding(v.gene, v.classification, getattr(v, "frequency", None))
+        if a is None:
             continue
         kind, severity = OUTCOME[a.level]
         message = f"{risk.label(a.level)}: {v.label} is {v.classification}. {a.advice}"

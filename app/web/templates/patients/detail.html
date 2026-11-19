@@ -197,7 +197,8 @@
 {% if relatives %}
 <section class="section">
   <div class="section-head"><h2>Family</h2><span class="muted small">{% if patient.relative_of %}People tested because of {{ patient.relative_of.name }}{% else %}Relatives tested because of this patient (cascade testing, rule D5){% endif %}</span></div>
-  <div class="table-wrap">
+  {% if ped %}<div class="card ped-card">{% include "patients/_pedigree.html" %}</div>{% endif %}
+  <div class="table-wrap" style="margin-top: 16px">
   <table>
     <thead><tr><th>Person</th><th>Relation</th><th>Diabetes</th>{% if clinical %}<th>Genetic risk</th>{% endif %}</tr></thead>
     <tbody>

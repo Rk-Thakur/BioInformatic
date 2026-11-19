@@ -1,6 +1,7 @@
 """`flask ...` commands. Re-evaluation and benchmark commands are added in later
 stages (plan §4); this module registers them all in one place."""
 
+import re
 from pathlib import Path
 
 import click
@@ -56,16 +57,22 @@ def create_user(username, role, password):
 # ------------------------------------------------------------------------ knowledge
 
 
+def _version_number(path):
+    m = re.search(r"_v(\d+)", Path(path).stem)
+    return int(m.group(1)) if m else 0
+
+
 def _run(fn, *args, **kwargs):
     """Run an import in one transaction; roll back and report on any error."""
     from app.services.knowledge_import import KnowledgeImportError
+    from app.services.risk import RiskLevelsError
     from app.services.rules import RuleValidationError
 
     try:
         result = fn(db.session, *args, **kwargs)
         db.session.commit()
         return result
-    except (KnowledgeImportError, RuleValidationError, FileNotFoundError) as exc:
+    except (KnowledgeImportError, RuleValidationError, RiskLevelsError, FileNotFoundError) as exc:
         db.session.rollback()
         raise click.ClickException(str(exc)) from exc
 
@@ -143,10 +150,16 @@ def load_knowledge():
     if not files:
         raise click.ClickException(f"no cleaned releases in {clean}; run the cleaning step first")
 
+    from app.services.knowledge_import import import_risk_levels, update_allele_frequencies
+
     have = set(db.session.scalars(select(KbRelease.source_file)))
     for f in files:
         if f.name in have:
-            click.echo(f"  skip {f.name} (already imported)")
+            n = _run(update_allele_frequencies, f)
+            click.echo(
+                f"  skip {f.name} (already imported)"
+                + (f"; allele frequencies filled for {n:,} records" if n else "")
+            )
             continue
         r = _run(import_release, f)
         state = " (current)" if r.is_current else ""
@@ -156,6 +169,17 @@ def load_knowledge():
     click.echo(f"  transcripts: {_run(import_transcripts, curated / 'gene_transcripts.tsv')}")
     added, unchanged = _run(import_rules, curated / "rules_v1.yaml")
     click.echo(f"  rules v1: {added} added, {unchanged} already present")
+    # Genetic risk levels (Stage 7): the first version becomes current, later ones pending.
+    for f in sorted(curated.glob("risk_levels_v*.yaml"), key=_version_number):
+        rs, added = _run(import_risk_levels, f)
+        state = (
+            "current"
+            if rs.is_current
+            else ("retired" if rs.applied_at else "pending (flask apply-risk-levels)")
+        )
+        click.echo(
+            f"  risk levels v{rs.version}: {'added' if added else 'already present'}, {state}"
+        )
     flags = curated / "activating_variants.tsv"
     if flags.exists():
         from app.services.knowledge_import import import_curated_flags
@@ -181,6 +205,12 @@ def list_knowledge():
     for r in db.session.scalars(select(Rule).order_by(Rule.code, Rule.version)):
         state = "current" if r.is_current else "pending/retired"
         click.echo(f"  {r.code} v{r.version}  {r.severity:<6}  {','.join(r.genes):<40} {state}")
+    from app.models import RiskLevelSet
+
+    click.echo("Genetic risk levels:")
+    for rs in db.session.scalars(select(RiskLevelSet).order_by(RiskLevelSet.version)):
+        state = "current" if rs.is_current else ("retired" if rs.applied_at else "pending")
+        click.echo(f"  v{rs.version}  {rs.source_file:<24} {state}")
 
 
 @click.command("kb-diff")
@@ -259,6 +289,38 @@ def apply_rule_cmd(code, version, mode):
 
     try:
         run = reevaluate_rule(db.session, code, version, _as_of(), mode=mode)
+        db.session.commit()
+    except ReevaluationError as exc:
+        db.session.rollback()
+        raise click.ClickException(str(exc)) from exc
+    _print_run(run)
+
+
+@click.command("import-risk-levels")
+@click.argument("path", type=click.Path(exists=True, dir_okay=False))
+def import_risk_levels_cmd(path):
+    """Import a genetic risk levels file (pending unless no version is current yet)."""
+    from app.services.knowledge_import import import_risk_levels
+
+    rs, added = _run(import_risk_levels, path)
+    state = "current" if rs.is_current else "pending: run `flask apply-risk-levels`"
+    click.echo(f"Risk levels v{rs.version}: {'imported' if added else 'already present'} ({state})")
+
+
+@click.command("apply-risk-levels")
+@click.argument("version", type=int)
+@click.option(
+    "--mode",
+    type=click.Choice(["change_driven", "full", "alert_once"]),
+    default="change_driven",
+    show_default=True,
+)
+def apply_risk_levels_cmd(version, mode):
+    """Make risk levels VERSION current and re-evaluate the people it affects (DD47)."""
+    from app.services.reevaluate import ReevaluationError, reevaluate_risk_levels
+
+    try:
+        run = reevaluate_risk_levels(db.session, version, _as_of(), mode=mode)
         db.session.commit()
     except ReevaluationError as exc:
         db.session.rollback()
@@ -384,6 +446,8 @@ COMMANDS = (
     kb_diff,
     reevaluate_cmd,
     apply_rule_cmd,
+    import_risk_levels_cmd,
+    apply_risk_levels_cmd,
     runs_cmd,
     seed_cohort_cmd,
     seed_synthea_cmd,

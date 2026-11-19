@@ -46,6 +46,7 @@ class VariantFacts:
     classification: str
     flags: frozenset = field(default_factory=frozenset)
     label: str = ""  # e.g. "HNF1A 12:120978486 A>C", for messages
+    frequency: float | None = None  # population allele frequency (risk filter, DD47)
 
 
 @dataclass(frozen=True)
@@ -86,6 +87,7 @@ class Outcome:
     severity: str
     message: str
     classification: str
+    risk_levels_version: int | None = None  # set for genetic risk findings (DD47)
 
 
 def _therapy_ok(therapy_rule, therapy):
@@ -127,7 +129,16 @@ def evaluate(facts, variants, rules, risk=None):
         if risk is None:
             return []
         return [
-            Outcome(v.patient_variant_id, None, a.code, kind, severity, msg, v.classification)
+            Outcome(
+                v.patient_variant_id,
+                None,
+                a.code,
+                kind,
+                severity,
+                msg,
+                v.classification,
+                risk.version,
+            )
             for v, a, kind, severity, msg in risk_findings(facts.sex, variants, risk)
         ]
     outcomes = []
@@ -232,7 +243,14 @@ def variant_facts(session, patient, release):
             continue  # not in ClinVar: no rule can match (DD4)
         label = f"{pv.gene} {pv.chrom}:{pv.pos} {pv.ref}>{pv.alt}"
         facts.append(
-            VariantFacts(pv.id, pv.gene, c.classification, frozenset(flags.get(pv.key, ())), label)
+            VariantFacts(
+                pv.id,
+                pv.gene,
+                c.classification,
+                frozenset(flags.get(pv.key, ())),
+                label,
+                c.allele_frequency,
+            )
         )
     return facts, by_id
 
@@ -285,11 +303,12 @@ def apply_outcomes(session, patient, outcomes, release, *, run=None, reclassifie
         alert = active.get(key)
         if alert is not None:
             last = alert.provenance[-1] if alert.provenance else None
-            if last is None or (last.release_id, last.rule_id, last.classification) != (
-                release.id,
-                o.rule_id,
-                o.classification,
-            ):
+            if last is None or (
+                last.release_id,
+                last.rule_id,
+                last.classification,
+                last.risk_levels_version,
+            ) != (release.id, o.rule_id, o.classification, o.risk_levels_version):
                 result.provenance_added += 1
                 session.add(
                     AlertProvenance(
@@ -298,6 +317,7 @@ def apply_outcomes(session, patient, outcomes, release, *, run=None, reclassifie
                         rule_id=o.rule_id,
                         run_id=run_id,
                         classification=o.classification,
+                        risk_levels_version=o.risk_levels_version,
                     )
                 )
             result.kept.append(alert)
@@ -325,6 +345,7 @@ def apply_outcomes(session, patient, outcomes, release, *, run=None, reclassifie
                 rule_id=o.rule_id,
                 run_id=run_id,
                 classification=o.classification,
+                risk_levels_version=o.risk_levels_version,
             )
         )
         result.created.append(alert)

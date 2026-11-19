@@ -47,7 +47,8 @@
         {% if a.patient_variant %}<span>{{ icon('dna') }}<code>{{ a.patient_variant.gene }} {{ a.patient_variant.chrom }}:{{ a.patient_variant.pos }} {{ a.patient_variant.ref|truncate(10, True, '…') }}&gt;{{ a.patient_variant.alt|truncate(10, True, '…') }}</code></span>{% endif %}
         {% if a.rule %}<span>{{ icon('book') }}rule {{ a.rule.code }} v{{ a.rule.version }} · source {{ a.rule.source }}</span>
         {% elif a.rule_code and a.rule_code.startswith('G') and risk_levels().assignment(a.rule_code) %}
-          <span>{{ icon('book') }}risk levels v{{ risk_levels().version }} · {{ a.rule_code }} · source {{ risk_levels().assignment(a.rule_code).source }}</span>{% endif %}
+          {% set rv = (a.provenance|map(attribute='risk_levels_version')|select|list)|last if a.provenance else none %}
+          <span>{{ icon('book') }}risk levels v{{ rv or risk_levels().version }} · {{ a.rule_code }} · source {{ risk_levels().assignment(a.rule_code).source }}</span>{% endif %}
         <span>{{ icon('clock') }}{{ a.created_at.strftime('%Y-%m-%d') }}</span>
         {% if a.reviewed_at %}<span>{{ icon('check') }}reviewed {{ a.reviewed_at.strftime('%Y-%m-%d') }}</span>{% endif %}
       </div>

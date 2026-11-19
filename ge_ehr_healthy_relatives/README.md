@@ -22,8 +22,8 @@ flask seed-relatives
 |---|---|
 | `relatives.csv` | One row per person: ID, name, proband (the patient they are related to), relation, sex, birth date, `diabetes = none`, carrier yes/no, the family gene and variant, which 1000 Genomes backgrounds their genome came from |
 | `vcfs/<relative_id>.vcf.gz` | Their gene test: a single-sample GRCh38 VCF, the same format as the cohort |
-| `expected_risk.csv` | The risk level each person should get under each ClinVar release (2023-01-07, 2023-12-30, 2026-10-19), and which variant decides it. Ground truth for the Step 6 tests |
-| `manifest.json` | Counts per level and release |
+| `expected_risk.csv` | The risk level each person should get under each ClinVar release (2023-01-07, 2023-12-30, 2026-10-19) and each risk levels version (`risk_levels_version` 1 or 2), and which variant decides it. Ground truth for the tests |
+| `manifest.json` | Counts per level, release and risk levels version |
 
 ## How the genomes are made
 
@@ -48,7 +48,25 @@ the same model as parents and children; this is a demo, not a pedigree simulator
 Every level (high, mild, uncertain, normal) appears, and every kind of reclassification
 moves at least one healthy person's risk.
 
-## Why "conflicting" ClinVar entries do not count
+## Risk levels v2 (population frequency, DD47)
+
+Version 2 counts "conflicting" variants as uncertain again, but ignores common ones:
+a variant found in 5% of people or more (ClinVar's ESP / ExAC / 1000 Genomes frequency)
+cannot make anyone uncertain (ACMG/AMP BA1). Under ClinVar 2026-10-19:
+
+| Level | v1 | v2 |
+|---|---:|---:|
+| high | 12 | 12 |
+| mild | 2 | 2 |
+| uncertain | 4 | 6 |
+| normal | 6 | 4 |
+
+The two people who become uncertain carry a rare conflicting variant (ABCC8
+11:17427954 G>A, 0.1%; KCNJ11 11:17387291 G>C, 1.7%). Each release is judged with the
+frequencies that release reports: ClinVar 2023-01-07 gives none for some common
+variants, so under v2 most people would look uncertain in 2023.
+
+## Why "conflicting" ClinVar entries did not count in v1
 
 Every healthy genome carries 11–20 variants in these genes that ClinVar lists as
 "conflicting classifications"; most are common polymorphisms (one has a 1000 Genomes

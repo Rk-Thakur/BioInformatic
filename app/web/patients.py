@@ -32,6 +32,7 @@ from app.services.patient_view import (
     risk_levels_for,
     risk_summary,
 )
+from app.services.pedigree import build_pedigree
 from app.services.workflow import NoCurrentReleaseError, evaluate_and_apply, process_upload
 from app.web.forms import EmptyForm, MedicationForm, PatientForm, UploadForm
 from app.web.security import ANY_ROLE, CLINICAL, roles_required
@@ -177,6 +178,7 @@ def detail(patient_id):
     open_alerts, past_alerts = patient_alerts(db.session, p) if clinical else ([], [])
     risk = risk_summary(db.session, p, open_alerts) if clinical else None
     relatives = family(db.session, p)
+    ped = build_pedigree(db.session, p) if relatives else None
     meds = sorted(p.medications, key=lambda m: (m.stop is not None, m.start), reverse=False)
     return render_template(
         "patients/detail.html",
@@ -190,6 +192,7 @@ def detail(patient_id):
         past_alerts=past_alerts,
         risk=risk,
         relatives=relatives,
+        ped=ped,
         meds=meds,
         as_of=as_of(),
         therapy=sorted(p.current_therapy(as_of())),

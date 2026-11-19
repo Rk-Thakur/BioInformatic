@@ -8,25 +8,50 @@
     "2026-10-19"
   ],
   "levels": {
-    "2023-01-07": {
-      "high": 7,
-      "mild": 2,
-      "uncertain": 5,
-      "normal": 10
+    "v1": {
+      "2023-01-07": {
+        "high": 7,
+        "mild": 2,
+        "uncertain": 5,
+        "normal": 10
+      },
+      "2023-12-30": {
+        "high": 7,
+        "mild": 4,
+        "uncertain": 6,
+        "normal": 7
+      },
+      "2026-10-19": {
+        "high": 12,
+        "mild": 2,
+        "uncertain": 4,
+        "normal": 6
+      }
     },
-    "2023-12-30": {
-      "high": 7,
-      "mild": 4,
-      "uncertain": 6,
-      "normal": 7
-    },
-    "2026-10-19": {
-      "high": 12,
-      "mild": 2,
-      "uncertain": 4,
-      "normal": 6
+    "v2": {
+      "2023-01-07": {
+        "high": 7,
+        "mild": 2,
+        "uncertain": 15,
+        "normal": 0
+      },
+      "2023-12-30": {
+        "high": 7,
+        "mild": 4,
+        "uncertain": 9,
+        "normal": 4
+      },
+      "2026-10-19": {
+        "high": 12,
+        "mild": 2,
+        "uncertain": 6,
+        "normal": 4
+      }
     }
   },
-  "risk_levels_file": "data/curated/risk_levels_v1.yaml",
+  "risk_levels_versions": [
+    1,
+    2
+  ],
   "note": "Synthetic demo data (DD43): 1000 Genomes backgrounds recombined per chromosome, family variants from ge_ehr_test_data_v2. Not real people."
 }

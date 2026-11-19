@@ -5,7 +5,8 @@
 #  2. database migrations
 #  3. on an empty database: knowledge (ClinVar releases, ClinGen, rules v1, activating
 #     list), then patients (Synthea + cohort VCFs), the healthy relatives, then
-#     optionally a re-evaluation; on an existing one: the relatives if still missing
+#     optionally a re-evaluation; on an existing one: new knowledge (load-knowledge skips
+#     what is present) and the relatives if still missing
 #  4. demo accounts (once), with the password in /app/instance/demo_accounts.txt
 #
 # Settings (environment variables):
@@ -47,9 +48,14 @@ if ! flask list-knowledge | grep -q CURRENT; then
             flask reevaluate "${REEVALUATE_TO}"
         fi
     fi
-elif [ "${SEED_PATIENTS:-1}" = "1" ] && [ "${SEED_RELATIVES:-1}" = "1" ]; then
-    # A database from before Stage 7: add the relatives once (already present = skipped).
-    flask seed-relatives
+else
+    # Existing database: add knowledge that newer versions bring (risk levels, population
+    # frequencies; everything already present is skipped), and the relatives if missing.
+    echo "[ge-ehr] existing database: adding any new knowledge"
+    flask load-knowledge
+    if [ "${SEED_PATIENTS:-1}" = "1" ] && [ "${SEED_RELATIVES:-1}" = "1" ]; then
+        flask seed-relatives
+    fi
 fi
 
 python - <<'PY'

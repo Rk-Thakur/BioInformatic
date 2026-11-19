@@ -8,6 +8,7 @@ from app.models.knowledge import (
     GeneTranscript,
     KbRelease,
     KnownVariant,
+    RiskLevelSet,
     Rule,
 )
 from app.models.patient import Condition, Diagnosis, Medication, Patient
@@ -29,6 +30,7 @@ __all__ = [
     "Patient",
     "PatientVariant",
     "ReevaluationRun",
+    "RiskLevelSet",
     "Rule",
     "User",
     "VcfUpload",

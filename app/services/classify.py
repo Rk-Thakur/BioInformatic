@@ -24,6 +24,7 @@ class Classification:
     expert_id: int | None = None
     clinvar_id: str | None = None
     review_status: str | None = None
+    allele_frequency: float | None = None  # population frequency in that release (DD47)
 
     @property
     def band(self):
@@ -87,6 +88,7 @@ def classify_keys(session, keys, release):
                 expert.id,
                 kv.clinvar_id,
                 kv.review_status,
+                kv.allele_frequency,
             )
         else:
             result[key] = Classification(
@@ -97,6 +99,7 @@ def classify_keys(session, keys, release):
                 None,
                 kv.clinvar_id,
                 kv.review_status,
+                kv.allele_frequency,
             )
     return result
 

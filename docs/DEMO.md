@@ -106,7 +106,7 @@ README.
 rule D5 recommends cascade testing. They never get treatment advice; they get a genetic
 risk level instead: **high** (P/LP in HNF1A, HNF4A, HNF1B, KCNJ11, ABCC8, INS), **mild**
 (P/LP in GCK), **uncertain** (a VUS) or **normal**. Levels and advice live in
-`data/curated/risk_levels_v1.yaml`.
+`data/curated/risk_levels_v1.yaml` (current) and `risk_levels_v2.yaml` (pending, step 8).
 
 1. **Patients → Without diabetes** (24 people). The **Genetic risk** column shows each level.
    The Overview box "Genetic risk in relatives" counts 12 high, 2 mild, 4 uncertain, 6 normal.
@@ -114,8 +114,13 @@ risk level instead: **high** (P/LP in HNF1A, HNF4A, HNF1B, KCNJ11, ABCC8, INS), 
    carries the FAMILY1 HNF1A variant (VUS in 2023, LP in 2026). The **Genetic risk card** says
    **High genetic risk**; the finding is marked *reclassified* and *high priority*, and the
    old "uncertain" note is in History. Advice: regular glucose checks and genetic counselling.
-3. **Family:** open the patient `5dbf61ce`. The **Family** section lists the five relatives:
-   three carriers (high risk) and two non-carriers (normal).
+3. **Family tree:** open the patient `5dbf61ce` and scroll to **Family**. The tree draws itself:
+   untested parents above, the patient (filled = diabetes, arrow = P) with two siblings, and
+   three children below. Rings show each relative's risk; a red dot marks the carriers.
+   Click **Jan 2023**: the three carriers turn grey (uncertain) and their dots disappear,
+   because the family variant was only a VUS. Click **Replay history** to watch ClinVar
+   Jan 2023 → Dec 2023 → Oct 2026: the rings turn red with a ripple, and the caption says
+   "3 risk levels changed since ClinVar Dec 2023". The table below lists the same people.
 4. **Downgrade:** `Relative 55e82252 (child of 7c7e4fdc)` carried a GCK variant that went
    from LP to VUS. Mild became uncertain, and a **review notice** asks the clinician to review
    any follow-up arranged because of it.
@@ -127,6 +132,18 @@ risk level instead: **high** (P/LP in HNF1A, HNF4A, HNF1B, KCNJ11, ABCC8, INS), 
    `5dbf61ce`, relation *Child*. Upload
    `ge_ehr_healthy_relatives/vcfs/4ad3850a-059a-5b5e-9b72-1db5d5f6d170.vcf.gz`: the card shows
    **High genetic risk** straight away.
+
+8. **Revising the risk levels (v1 → v2):** the Knowledge page shows risk levels v1
+   *current* and v2 *pending*. Version 2 counts rare "conflicting" variants as uncertain
+   again and ignores common ones (found in 5% of people or more). Apply it:
+
+   ```bash
+   docker compose exec web flask apply-risk-levels 2
+   ```
+
+   Only the 8 people whose findings change are re-checked; 2 of them move from normal
+   to **uncertain** (Overview: 12 high, 2 mild, 6 uncertain, 4 normal). Other findings
+   record "confirmed under risk levels v2" only when re-checked.
 
 The 24 people and their expected levels for every ClinVar release are in
 `ge_ehr_healthy_relatives/` (README, `expected_risk.csv`). Set `SEED_RELATIVES: "0"` in

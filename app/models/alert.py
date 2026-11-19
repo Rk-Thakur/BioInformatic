@@ -80,6 +80,8 @@ class AlertProvenance(db.Model):
     rule_id: Mapped[int | None] = mapped_column(ForeignKey("rule.id"))
     run_id: Mapped[int | None] = mapped_column(ForeignKey("reevaluation_run.id"))
     classification: Mapped[str] = mapped_column(String(10))  # variant class under that release
+    # Stage 7 (DD47): version of the genetic risk levels, for risk findings only.
+    risk_levels_version: Mapped[int | None]
     at: Mapped[datetime] = mapped_column(default=utcnow)
 
     alert: Mapped[Alert] = relationship(back_populates="provenance")

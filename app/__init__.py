@@ -16,13 +16,19 @@ def create_app(config_name=None, overrides=None):
     """
     config_name = config_name or os.environ.get("GE_EHR_CONFIG", "development")
     config_cls = CONFIGS[config_name]
-    if hasattr(config_cls, "validate"):
-        config_cls.validate()
 
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config_cls)
+    secret_file = app.config.get("SECRET_KEY_FILE")
+    if secret_file and "SECRET_KEY" not in os.environ:
+        path = os.path.join(app.instance_path, secret_file)
+        if os.path.isfile(path):
+            with open(path) as fh:
+                app.config["SECRET_KEY"] = fh.read().strip() or app.config["SECRET_KEY"]
     if overrides:
         app.config.update(overrides)
+    if hasattr(config_cls, "validate"):
+        config_cls.validate(app.config)
 
     os.makedirs(app.instance_path, exist_ok=True)
     if not app.config["SQLALCHEMY_DATABASE_URI"]:

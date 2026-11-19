@@ -1,6 +1,6 @@
 # Data quality report (Stage 1a)
 
-Generated 2026-11-02 by `python -m scripts.clean.run_all`. Raw inputs in `data/raw/` are never modified; every number below is recomputed on each run.
+Generated 2026-11-19 by `python -m scripts.clean.run_all`. Raw inputs in `data/raw/` are never modified; every number below is recomputed on each run.
 
 ## C1 · Raw inputs
 
@@ -53,6 +53,7 @@ Generated 2026-11-02 by `python -m scripts.clean.run_all`. Raw inputs in `data/r
 | C6 | several panel genes listed, nearest gene chosen (flagged) | 0 |
 | C7 | kept, flagged: indel longer than 50 bp | 11 |
 | C11 | kept, flagged: more than 5,000 bp outside the assigned gene | 0 |
+| C15 | kept, with a population allele frequency (ESP/ExAC/1000G) | 885 |
 | out | clean records | 4,386 |
 
 **Clean records by gene**
@@ -100,6 +101,7 @@ Generated 2026-11-02 by `python -m scripts.clean.run_all`. Raw inputs in `data/r
 | C6 | several panel genes listed, nearest gene chosen (flagged) | 0 |
 | C7 | kept, flagged: indel longer than 50 bp | 13 |
 | C11 | kept, flagged: more than 5,000 bp outside the assigned gene | 0 |
+| C15 | kept, with a population allele frequency (ESP/ExAC/1000G) | 1,436 |
 | out | clean records | 5,237 |
 
 **Clean records by gene**
@@ -147,6 +149,7 @@ Generated 2026-11-02 by `python -m scripts.clean.run_all`. Raw inputs in `data/r
 | C6 | several panel genes listed, nearest gene chosen (flagged) | 0 |
 | C7 | kept, flagged: indel longer than 50 bp | 14 |
 | C11 | kept, flagged: more than 5,000 bp outside the assigned gene | 0 |
+| C15 | kept, with a population allele frequency (ESP/ExAC/1000G) | 1,845 |
 | out | clean records | 8,381 |
 
 **Clean records by gene**
