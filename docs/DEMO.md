@@ -16,7 +16,8 @@ docker compose exec web cat /app/instance/demo_accounts.txt
 
 Open http://localhost:5000. Visitors first see the **home page**, which explains the problem, how
 GE-EHR works and the measured results, with a **Log in** button at the top. On first start the container loads ClinVar 2023-01-07, the
-Synthea patients and their VCFs, then re-evaluates everyone to ClinVar 2026-10-19, so the
+Synthea patients and their VCFs, 24 healthy relatives with their gene tests, then
+re-evaluates everyone to ClinVar 2026-10-19, so the
 app opens in the "after a new ClinVar release" state. Without Docker, run `flask run` with
 the database built as in the README.
 
@@ -33,10 +34,11 @@ Tip: on the login page, **"or try a demo account"** logs you in with one click (
 
 ## 2. Clinician: medication-aware alerts (S1, S2, S4)
 
-Log in as **demo_clinician**. You land on the **Overview**: items waiting for review, the
-latest re-evaluation as a flow (1,458 variants checked → 40 changed → 23 patients → 26 new
-alerts), the high-priority timeline and the advice in force per rule. The moon button switches
-light and dark.
+Log in as **demo_clinician**. You land on the **Overview**: items waiting for review (62), the
+latest re-evaluation as a flow (1,458 variants checked → 40 changed → 38 people re-evaluated →
+39 new alerts: 23 patients with diabetes plus 15 healthy relatives), the high-priority
+timeline, the advice in force per rule and the genetic risk of the relatives (section 7).
+The moon button switches light and dark.
 
 - `0661fbba (S1)`: HNF1A pathogenic, on insulin. **Rule D2, high**: consider low-dose
   sulfonylurea. **Rule D5, low**: cascade testing of relatives.
@@ -75,8 +77,8 @@ patient page.
   Observation is final. (`0661fbba (S1)` also shows one amended variant: LP in 2023, P in
   2026.)
 - The **Knowledge** page lists all three ClinVar releases (2026-10-19 current), every rule
-  version (D4 v2 pending) and the re-evaluation run: 40 of 1458 variants changed,
-  23 patients re-evaluated.
+  version (D4 v2 pending), the genetic risk levels in force (G1–G6) and the re-evaluation
+  run: 40 of 1,458 variants changed, 38 people re-evaluated.
 
 ## 5. Rule revision (Algorithm 3, RS5)
 
@@ -97,6 +99,38 @@ docker compose run --rm web sh -c "python -m scripts.make_controlled_release && 
 About a minute. It writes `eval/results/SUMMARY.md`: alert-once vs full recompute vs
 GE-EHR on four knowledge changes. The 10,000-patient run takes about 30 minutes; see the
 README.
+
+## 7. Genetic risk in healthy relatives (Stage 7 extension, not in the paper)
+
+24 people **without diabetes**, each a relative of a cohort patient, were tested because
+rule D5 recommends cascade testing. They never get treatment advice; they get a genetic
+risk level instead: **high** (P/LP in HNF1A, HNF4A, HNF1B, KCNJ11, ABCC8, INS), **mild**
+(P/LP in GCK), **uncertain** (a VUS) or **normal**. Levels and advice live in
+`data/curated/risk_levels_v1.yaml`.
+
+1. **Patients → Without diabetes** (24 people). The **Genetic risk** column shows each level.
+   The Overview box "Genetic risk in relatives" counts 12 high, 2 mild, 4 uncertain, 6 normal.
+2. **Upgrade moves a relative's risk:** open `Relative 4ad3850a (child of 5dbf61ce)`. She
+   carries the FAMILY1 HNF1A variant (VUS in 2023, LP in 2026). The **Genetic risk card** says
+   **High genetic risk**; the finding is marked *reclassified* and *high priority*, and the
+   old "uncertain" note is in History. Advice: regular glucose checks and genetic counselling.
+3. **Family:** open the patient `5dbf61ce`. The **Family** section lists the five relatives:
+   three carriers (high risk) and two non-carriers (normal).
+4. **Downgrade:** `Relative 55e82252 (child of 7c7e4fdc)` carried a GCK variant that went
+   from LP to VUS. Mild became uncertain, and a **review notice** asks the clinician to review
+   any follow-up arranged because of it.
+5. **Pregnancy note:** `Relative 4c4be9c0 (child of 3a54d594)` is a woman carrying an HNF4A
+   variant; her finding adds the note for the obstetric team.
+6. **Lab technician:** log in as **demo_lab_tech** and open any relative. The record, the
+   variants and the family names are visible; no risk card, column or level anywhere.
+7. **Live:** as the clinician, **New patient** → diabetes type **No diabetes**, family link
+   `5dbf61ce`, relation *Child*. Upload
+   `ge_ehr_healthy_relatives/vcfs/4ad3850a-059a-5b5e-9b72-1db5d5f6d170.vcf.gz`: the card shows
+   **High genetic risk** straight away.
+
+The 24 people and their expected levels for every ClinVar release are in
+`ge_ehr_healthy_relatives/` (README, `expected_risk.csv`). Set `SEED_RELATIVES: "0"` in
+`docker-compose.yml` to leave them out.
 
 ## Reset
 

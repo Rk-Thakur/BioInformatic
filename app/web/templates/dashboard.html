@@ -58,7 +58,7 @@
       <div class="flow">
         <div class="flow-node"><div class="ring">{{ icon('search') }}</div><div class="n" data-count="{{ o.last_run.variants_examined }}">{{ '{:,}'.format(o.last_run.variants_examined) }}</div><div class="l">stored variants checked</div></div>
         <div class="flow-node"><div class="ring">{{ icon('refresh') }}</div><div class="n" data-count="{{ o.last_run.variants_changed }}">{{ '{:,}'.format(o.last_run.variants_changed) }}</div><div class="l">changed classification</div></div>
-        <div class="flow-node"><div class="ring">{{ icon('users') }}</div><div class="n" data-count="{{ o.last_run.patients_touched }}">{{ '{:,}'.format(o.last_run.patients_touched) }}</div><div class="l">patients re-evaluated</div></div>
+        <div class="flow-node"><div class="ring">{{ icon('users') }}</div><div class="n" data-count="{{ o.last_run.patients_touched }}">{{ '{:,}'.format(o.last_run.patients_touched) }}</div><div class="l">people re-evaluated</div></div>
         <div class="flow-node"><div class="ring">{{ icon('bell') }}</div><div class="n" data-count="{{ o.last_run.alerts_created }}">{{ '{:,}'.format(o.last_run.alerts_created) }}</div><div class="l">new alerts · {{ o.last_run.alerts_superseded }} superseded</div></div>
       </div>
       {% if o.run_notes %}
