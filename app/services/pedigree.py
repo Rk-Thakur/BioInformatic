@@ -28,7 +28,13 @@ from app.services.classify import classify_keys
 from app.services.risk import current_risk_levels, person_level, risk_findings
 from app.services.rule_engine import VariantFacts
 
-SPACING = 132  # horizontal distance between people
+SPACING = 150  # horizontal distance between people
+ROW = 176  # vertical distance between generations
+R = 26  # symbol half-size
+MARGIN_X = 168  # left column for the generation labels
+MARGIN_R = 70
+TOP = 70
+CURVE = 12  # corner radius of the family lines
 SHORT = {  # level labels short enough to sit under a symbol
     "high": "High risk",
     "mild": "Mild",
@@ -37,10 +43,6 @@ SHORT = {  # level labels short enough to sit under a symbol
     "untested": "Not tested",
 }
 MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
-ROW = 150  # vertical distance between generations
-R = 22  # symbol half-size
-MARGIN_X = 70
-TOP = 56
 
 
 @dataclass
@@ -53,6 +55,7 @@ class Person:
     x: float = 0.0
     y: float = 0.0
     order: int = 0  # animation order
+    age: int | None = None  # years, at the reference date (or at death)
     states: dict = field(default_factory=dict)  # release version -> state dict
 
     @property
@@ -67,13 +70,15 @@ class Person:
 @dataclass
 class Pedigree:
     people: list
-    lines: list  # [{"d": svg path, "gen": n}]
+    lines: list  # [{"d": svg path, "gen": n, "to": person key or None}]
+    bands: list  # [{"y": centre, "numeral": "I", "label": "Parents"}]
     width: float
     height: float
     releases: list  # versions, oldest first
     release_labels: dict  # version -> "Oct 2026"
     current: str | None
     summary: dict  # version -> one-sentence change summary
+    stats: dict  # version -> {"carriers": n, "high": n, ...} over the relatives
     proband: Patient
     unlinked: list  # same family group, relation not recorded
 
@@ -131,39 +136,66 @@ def layout(proband, siblings, parents, children, *, partner_sex=None):
     for p in everyone:
         p.y = y[p.gen]
 
-    def d(*pts):
+    def straight(*pts):
         return "M" + " L".join(f"{px:.1f} {py:.1f}" for px, py in pts)
+
+    def branch(x0, y0, bar, x1, y1):
+        """From a couple's midpoint down to the bar, along it and down to one child,
+        with rounded corners. One path per child, so each line grows to its child."""
+        if abs(x1 - x0) < 1:
+            return straight((x0, y0), (x1, y1))
+        s_ = 1 if x1 > x0 else -1
+        r = min(CURVE, abs(x1 - x0) / 2)
+        return (
+            f"M{x0:.1f} {y0:.1f} V{bar - r:.1f} Q{x0:.1f} {bar:.1f} {x0 + s_ * r:.1f} {bar:.1f} "
+            f"H{x1 - s_ * r:.1f} Q{x1:.1f} {bar:.1f} {x1:.1f} {bar + r:.1f} V{y1:.1f}"
+        )
 
     if parent_row:
         a, b = parent_row
-        lines.append({"d": d((a.x + R, a.y), (b.x - R, b.y)), "gen": 0})
+        lines.append({"d": straight((a.x + R, a.y), (b.x - R, b.y)), "gen": 0, "to": None})
         mid = (a.x + b.x) / 2
-        bar = y[0] - R - 34
-        sibs = [p for p in gen0 if p is not partner]
-        lines.append({"d": d((mid, a.y), (mid, bar)), "gen": 1})
-        lines.append(
-            {"d": d((min(p.x for p in sibs), bar), (max(p.x for p in sibs), bar)), "gen": 1}
-        )
-        for p in sibs:
-            lines.append({"d": d((p.x, bar), (p.x, p.y - R - 8)), "gen": 2})
+        bar = y[0] - R - 40
+        for p in (q for q in gen0 if q is not partner):
+            lines.append({"d": branch(mid, a.y, bar, p.x, p.y - R - 10), "gen": 1, "to": p.key})
     if children:
-        lines.append({"d": d((proband.x + R, proband.y), (partner.x - R, partner.y)), "gen": 2})
-        mid = (proband.x + partner.x) / 2
-        bar = y[1] - R - 34
-        lines.append({"d": d((mid, proband.y), (mid, bar)), "gen": 3})
         lines.append(
-            {"d": d((min(c.x for c in children), bar), (max(c.x for c in children), bar)), "gen": 3}
+            {
+                "d": straight((proband.x + R, proband.y), (partner.x - R, partner.y)),
+                "gen": 2,
+                "to": None,
+            }
         )
+        mid = (proband.x + partner.x) / 2
+        bar = y[1] - R - 40
         for c in children:
-            lines.append({"d": d((c.x, bar), (c.x, c.y - R - 8)), "gen": 4})
+            lines.append(
+                {"d": branch(mid, proband.y, bar, c.x, c.y - R - 10), "gen": 3, "to": c.key}
+            )
 
     order = sorted(everyone, key=lambda p: (p.gen, p.x))
     for i, p in enumerate(order):
         p.order = i
-    width = max(p.x for p in everyone) + MARGIN_X
-    height = max(p.y for p in everyone) + R + 64
+    width = max(p.x for p in everyone) + MARGIN_R
+    height = max(p.y for p in everyone) + R + 84
     people.extend(order)
     return people, lines, width, height, len(rows)
+
+
+def bands(people):
+    """Generation bands (pedigree convention: I, II, III from the oldest)."""
+    names = {-1: "Parents", 0: "Patient & siblings", 1: "Children"}
+    gens = sorted({p.gen for p in people})
+    words = {-1: ["Parents"], 0: ["Patient &", "siblings"], 1: ["Children"]}
+    return [
+        {
+            "y": next(p.y for p in people if p.gen == g),
+            "numeral": "I II III".split()[i],
+            "label": names[g],
+            "lines": words[g],
+        }
+        for i, g in enumerate(gens)
+    ]
 
 
 # --------------------------------------------------------------------------- database
@@ -181,15 +213,18 @@ def _releases(session):
     return rel, current
 
 
-def build_pedigree(session, patient):
-    """Pedigree for the family `patient` belongs to, or None when nobody is linked."""
+def build_pedigree(session, patient, as_of=None):
+    """Pedigree for the family `patient` belongs to, or None when nobody is linked.
+
+    as_of: reference date for the ages shown in the symbols (default: today)."""
+    as_of = as_of or dt.date.today()
     proband = patient.relative_of or patient
     relatives = list(proband.relatives)
     if not relatives:
         return None
 
     def person(p, gen, role):
-        return Person(f"p{p.id}", gen, role, sex=p.sex, patient=p)
+        return Person(f"p{p.id}", gen, role, sex=p.sex, patient=p, age=_age(p, as_of))
 
     by_relation = {"parent": [], "sibling": [], "child": []}
     for r in sorted(
@@ -231,7 +266,7 @@ def build_pedigree(session, patient):
     keys = {k for vs in variants.values() for _, _, k in vs}
     risk = current_risk_levels()
 
-    summary, previous, previous_date = {}, None, None
+    summary, stats, previous, previous_date = {}, {}, None, None
     for rel in releases:
         classes = classify_keys(session, keys, rel) if keys else {}
         family_pathogenic = {
@@ -264,6 +299,14 @@ def build_pedigree(session, patient):
                 "label": SHORT.get(level, "Diabetes"),
                 "carrier": carrier,
             }
+        relatives_now = [p.states[rel.version] for p in real if p.role != "proband"]
+        stats[rel.version] = {
+            "carriers": sum(st["carrier"] for st in relatives_now),
+            **{
+                lv: sum(st["level"] == lv for st in relatives_now)
+                for lv in ("high", "mild", "uncertain", "normal")
+            },
+        }
         if previous is not None:
             moved = [
                 p for p in real if p.states[rel.version]["level"] != p.states[previous]["level"]
@@ -291,15 +334,27 @@ def build_pedigree(session, patient):
     return Pedigree(
         people=people,
         lines=lines,
+        bands=bands(people),
         width=width,
         height=height,
         releases=[r.version for r in releases],
         release_labels={r.version: _label(r.release_date) for r in releases},
         current=current.version if current else None,
         summary=summary,
+        stats=stats,
         proband=proband,
         unlinked=list(unlinked),
     )
+
+
+def _age(patient, as_of):
+    if patient.birth_date is None:
+        return None
+    end = patient.deceased_date or as_of
+    years = end.year - patient.birth_date.year
+    if (end.month, end.day) < (patient.birth_date.month, patient.birth_date.day):
+        years -= 1
+    return max(years, 0)
 
 
 def _label(day):

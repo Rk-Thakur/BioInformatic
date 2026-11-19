@@ -178,7 +178,7 @@ def detail(patient_id):
     open_alerts, past_alerts = patient_alerts(db.session, p) if clinical else ([], [])
     risk = risk_summary(db.session, p, open_alerts) if clinical else None
     relatives = family(db.session, p)
-    ped = build_pedigree(db.session, p) if relatives else None
+    ped = build_pedigree(db.session, p, as_of()) if relatives else None
     meds = sorted(p.medications, key=lambda m: (m.stop is not None, m.start), reverse=False)
     return render_template(
         "patients/detail.html",

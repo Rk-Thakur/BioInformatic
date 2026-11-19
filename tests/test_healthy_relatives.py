@@ -536,10 +536,20 @@ def test_pedigree_layout_adds_connecting_placeholders():
     assert by["p3"].y - by["p1"].y == ROW == by["p1"].y - by["ph-father"].y
     assert min(p.x for p in people) > 0 and width > max(p.x for p in people)
     assert [p.order for p in people] == list(range(len(people)))
-    assert len(lines) == 3 + 2 + 3 + 2  # couple, drop, bar, 2 sibs; couple, drop, bar, 2 kids
+    # one couple line per couple, and one curved line from each couple to each child
+    assert len(lines) == 1 + 2 + 1 + 2
+    assert sorted(ln["to"] for ln in lines if ln["to"]) == ["p1", "p2", "p3", "p4"]
 
     alone = layout(Person("p1", 0, "proband", sex="F"), [], [], [])
     assert len(alone[0]) == 1 and alone[1] == [] and alone[4] == 1
+
+    from app.services.pedigree import bands
+
+    assert [(b["numeral"], b["label"]) for b in bands(people)] == [
+        ("I", "Parents"),
+        ("II", "Patient & siblings"),
+        ("III", "Children"),
+    ]
 
 
 @pytest.mark.slow
