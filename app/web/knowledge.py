@@ -2,7 +2,7 @@ from flask import Blueprint, render_template
 from sqlalchemy import func, select
 
 from app.extensions import db
-from app.models import ExpertClassification, KbRelease, ReevaluationRun, Rule
+from app.models import ExpertClassification, KbRelease, ReevaluationRun, RiskLevelSet, Rule
 from app.web.security import CLINICAL, roles_required
 
 bp = Blueprint("knowledge", __name__, url_prefix="/knowledge")
@@ -22,6 +22,12 @@ def index():
         .limit(20)
     ).all()
     experts = db.session.scalar(select(func.count()).select_from(ExpertClassification))
+    risk_sets = db.session.scalars(select(RiskLevelSet).order_by(RiskLevelSet.version)).all()
     return render_template(
-        "knowledge/index.html", releases=releases, rules=rules, runs=runs, experts=experts
+        "knowledge/index.html",
+        releases=releases,
+        rules=rules,
+        runs=runs,
+        experts=experts,
+        risk_sets=risk_sets,
     )

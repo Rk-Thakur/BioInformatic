@@ -61,6 +61,7 @@ COPY --chown=geehr:geehr eval/ eval/
 COPY --chown=geehr:geehr tests/ tests/
 COPY --chown=geehr:geehr docs/ docs/
 COPY --chown=geehr:geehr ge_ehr_test_data_v2/ ge_ehr_test_data_v2/
+COPY --chown=geehr:geehr ge_ehr_healthy_relatives/ ge_ehr_healthy_relatives/
 COPY --chown=geehr:geehr data/curated/ data/curated/
 COPY --chown=geehr:geehr --from=build /app/data/clean/ data/clean/
 COPY --chown=geehr:geehr wsgi.py pyproject.toml README.md ./

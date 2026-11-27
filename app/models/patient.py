@@ -3,14 +3,16 @@
 from datetime import date, datetime
 
 from sqlalchemy import ForeignKey, String
+from sqlalchemy import true as sa_true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
-from app.models.base import DRUG_CLASSES, one_of, utcnow
+from app.models.base import DRUG_CLASSES, RELATIONS, one_of, utcnow
 
 
 class Patient(db.Model):
     __tablename__ = "patient"
+    __table_args__ = (one_of("relation", RELATIONS),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     external_id: Mapped[str] = mapped_column(String(64), unique=True)  # Synthea UUID
@@ -21,6 +23,11 @@ class Patient(db.Model):
     family_id: Mapped[str | None] = mapped_column(String(64), index=True)
     # C14: deceased patients stay in the database (family groups) but get no new alerts.
     is_active: Mapped[bool] = mapped_column(default=True)
+    # Stage 7 (DD44). People without diabetes (e.g. relatives offered cascade testing) get
+    # a genetic risk level instead of treatment rules D1-D6.
+    has_diabetes: Mapped[bool] = mapped_column(default=True, server_default=sa_true())
+    relative_of_id: Mapped[int | None] = mapped_column(ForeignKey("patient.id"), index=True)
+    relation: Mapped[str | None] = mapped_column(String(20))  # parent | sibling | child
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     diagnoses: Mapped[list["Diagnosis"]] = relationship(
@@ -31,6 +38,12 @@ class Patient(db.Model):
     )
     medications: Mapped[list["Medication"]] = relationship(
         back_populates="patient", cascade="all, delete-orphan"
+    )
+    relative_of: Mapped["Patient | None"] = relationship(
+        remote_side=[id], back_populates="relatives"
+    )
+    relatives: Mapped[list["Patient"]] = relationship(
+        back_populates="relative_of", order_by="Patient.name"
     )
 
     def current_therapy(self, as_of):

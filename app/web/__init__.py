@@ -43,6 +43,11 @@ def register_blueprints(app):
     for bp in (main, auth.bp, patients.bp, alerts.bp, knowledge.bp):
         app.register_blueprint(bp)
 
+    from app.services.risk import current_risk_levels
+
+    # A global (not a context variable) so imported macros can label risk findings.
+    app.jinja_env.globals["risk_levels"] = current_risk_levels
+
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Please log in."
     login_manager.login_message_category = "error"

@@ -20,6 +20,7 @@ from app.domain import ACTIONABLE
 from app.models import Alert, AlertProvenance, CuratedFlag, PatientVariant, Rule, audit
 from app.models.base import OPEN_STATUSES, utcnow
 from app.services.classify import classify_keys
+from app.services.risk import current_risk_levels, risk_findings
 
 # DD15: rules whose recommendation does not hold in pregnancy.
 PREGNANCY_CAVEAT_RULES = {"D1"}
@@ -32,6 +33,10 @@ class PatientFacts:
     age_at_diagnosis_months: float | None = None
     pregnant: bool = False
     active: bool = True  # False for deceased patients (C14): no new alerts
+    # Stage 7 (DD44): treatment rules D1-D6 are for people with diabetes only; people
+    # without diabetes get a genetic risk level instead.
+    has_diabetes: bool = True
+    sex: str | None = None  # Stage 7: pregnancy notes on risk findings are for women
 
 
 @dataclass(frozen=True)
@@ -41,6 +46,7 @@ class VariantFacts:
     classification: str
     flags: frozenset = field(default_factory=frozenset)
     label: str = ""  # e.g. "HNF1A 12:120978486 A>C", for messages
+    frequency: float | None = None  # population allele frequency (risk filter, DD47)
 
 
 @dataclass(frozen=True)
@@ -81,6 +87,7 @@ class Outcome:
     severity: str
     message: str
     classification: str
+    risk_levels_version: int | None = None  # set for genetic risk findings (DD47)
 
 
 def _therapy_ok(therapy_rule, therapy):
@@ -110,10 +117,30 @@ def _extra_ok(extra, facts):
     return None
 
 
-def evaluate(facts, variants, rules):
-    """Algorithm 1 for one patient. Returns a list of Outcome (no side effects)."""
+def evaluate(facts, variants, rules, risk=None):
+    """Algorithm 1 for one patient. Returns a list of Outcome (no side effects).
+
+    People without diabetes get no treatment rules; with `risk` (RiskLevels) they get
+    their genetic risk findings instead (Stage 7, DD45).
+    """
     if not facts.active:
         return []
+    if not facts.has_diabetes:
+        if risk is None:
+            return []
+        return [
+            Outcome(
+                v.patient_variant_id,
+                None,
+                a.code,
+                kind,
+                severity,
+                msg,
+                v.classification,
+                risk.version,
+            )
+            for v, a, kind, severity, msg in risk_findings(facts.sex, variants, risk)
+        ]
     outcomes = []
     for rule in rules:
         classes = set(rule.genetic["classes"])
@@ -187,6 +214,8 @@ def patient_facts(patient, as_of):
         age_at_diagnosis_months=dx.age_at_diagnosis_months if dx else None,
         pregnant=patient.is_pregnant_on(as_of),
         active=patient.is_active,
+        has_diabetes=patient.has_diabetes is not False,  # None before the first flush
+        sex=patient.sex,
     )
 
 
@@ -214,7 +243,14 @@ def variant_facts(session, patient, release):
             continue  # not in ClinVar: no rule can match (DD4)
         label = f"{pv.gene} {pv.chrom}:{pv.pos} {pv.ref}>{pv.alt}"
         facts.append(
-            VariantFacts(pv.id, pv.gene, c.classification, frozenset(flags.get(pv.key, ())), label)
+            VariantFacts(
+                pv.id,
+                pv.gene,
+                c.classification,
+                frozenset(flags.get(pv.key, ())),
+                label,
+                c.allele_frequency,
+            )
         )
     return facts, by_id
 
@@ -223,7 +259,9 @@ def evaluate_patient(session, patient, release, as_of, rules=None):
     """Read the patient's facts from the database and run Algorithm 1."""
     variants, _ = variant_facts(session, patient, release)
     rules = rules if rules is not None else current_rules(session)
-    return evaluate(patient_facts(patient, as_of), variants, rules)
+    facts = patient_facts(patient, as_of)
+    risk = None if facts.has_diabetes else current_risk_levels()
+    return evaluate(facts, variants, rules, risk)
 
 
 @dataclass
@@ -265,11 +303,12 @@ def apply_outcomes(session, patient, outcomes, release, *, run=None, reclassifie
         alert = active.get(key)
         if alert is not None:
             last = alert.provenance[-1] if alert.provenance else None
-            if last is None or (last.release_id, last.rule_id, last.classification) != (
-                release.id,
-                o.rule_id,
-                o.classification,
-            ):
+            if last is None or (
+                last.release_id,
+                last.rule_id,
+                last.classification,
+                last.risk_levels_version,
+            ) != (release.id, o.rule_id, o.classification, o.risk_levels_version):
                 result.provenance_added += 1
                 session.add(
                     AlertProvenance(
@@ -278,6 +317,7 @@ def apply_outcomes(session, patient, outcomes, release, *, run=None, reclassifie
                         rule_id=o.rule_id,
                         run_id=run_id,
                         classification=o.classification,
+                        risk_levels_version=o.risk_levels_version,
                     )
                 )
             result.kept.append(alert)
@@ -305,6 +345,7 @@ def apply_outcomes(session, patient, outcomes, release, *, run=None, reclassifie
                 rule_id=o.rule_id,
                 run_id=run_id,
                 classification=o.classification,
+                risk_levels_version=o.risk_levels_version,
             )
         )
         result.created.append(alert)

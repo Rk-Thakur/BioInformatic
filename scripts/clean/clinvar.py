@@ -3,6 +3,11 @@
 Output columns (data/clean/clinvar_<YYYYMMDD>.panel.tsv):
   chrom pos ref alt gene gene_method genes_listed clinvar_id clnsig_raw classification
   review_status stars expert_reviewed variant_type hgvs_g disease long_indel outside_gene
+  allele_frequency
+
+allele_frequency (Stage 7, DD47): the highest alternate-allele frequency ClinVar reports
+for the variant (AF_ESP, AF_EXAC, AF_TGP), empty when none is given. Used only to
+recognise common polymorphisms (ACMG BA1); it never changes a classification.
 """
 
 import gzip
@@ -32,7 +37,9 @@ COLUMNS = [
     "disease",
     "long_indel",
     "outside_gene",
+    "allele_frequency",
 ]
+AF_FIELDS = ("AF_ESP", "AF_EXAC", "AF_TGP")
 LONG_INDEL = 50
 _GENE_BYTES = tuple(f"{g}:".encode() for g in PANEL_GENES)
 
@@ -43,6 +50,17 @@ def _info(info):
         k, _, v = item.partition("=")
         out[k] = v
     return out
+
+
+def allele_frequency(info):
+    """Highest of ClinVar's population frequencies, as text ('' if none). C15."""
+    values = []
+    for k in AF_FIELDS:
+        try:
+            values.append(float(info[k]))
+        except (KeyError, ValueError):
+            continue
+    return f"{max(values):.6g}" if values else ""
 
 
 def read_header(path):
@@ -143,6 +161,7 @@ def clean_release(path, genes, section=None):
                     "disease": f.get("CLNDN", ""),
                     "long_indel": int(long_indel),
                     "outside_gene": int(outside),
+                    "allele_frequency": allele_frequency(f),
                 }
             )
 
@@ -170,6 +189,11 @@ def clean_release(path, genes, section=None):
             "C11",
             f"kept, flagged: more than {FLANK:,} bp outside the assigned gene",
             c["outside_gene"],
+        )
+        s.add(
+            "C15",
+            "kept, with a population allele frequency (ESP/ExAC/1000G)",
+            sum(r["allele_frequency"] != "" for r in rows),
         )
         s.add("out", "clean records", len(rows))
         if raw_terms:

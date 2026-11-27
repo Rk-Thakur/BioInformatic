@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "icons.html" import icon %}
-{% from "macros.html" import alert_event, classification, initials %}
+{% from "macros.html" import alert_event, classification, initials, risk_badge %}
 {% block title %}{{ patient.name }}{% endblock %}
 {% block content %}
 {% set band_of = {'P': 'actionable', 'LP': 'actionable', 'P/LP': 'actionable', 'VUS': 'vus', 'CONFLICT': 'vus',
@@ -16,6 +16,8 @@
         <code>{{ patient.external_id }}</code>
         {% if patient.family_id %}<span class="badge sev-low">family {{ patient.family_id }}</span>{% endif %}
         {% if patient.is_active %}<span class="badge ok">active</span>{% else %}<span class="badge sev-info">inactive</span>{% endif %}
+        {% if not patient.has_diabetes %}<span class="badge sev-info">no diabetes</span>{% endif %}
+        {% if patient.relative_of %}<span>{{ patient.relation }} of <a href="{{ url_for('patients.detail', patient_id=patient.relative_of.id) }}">{{ patient.relative_of.name }}</a></span>{% endif %}
         <span>interpreted with ClinVar {{ release.version if release else '— (no release loaded)' }}</span>
       </div>
     </div>
@@ -26,7 +28,11 @@
 <div class="grid grid-2">
   <div class="card hover reveal" style="--i: 2">
     <div class="row"><span class="ring-icon">{{ icon('book') }}</span><h3>Diagnosis</h3></div>
-    {% if diagnosis %}
+    {% if not patient.has_diabetes %}
+      <p style="margin: 12px 0 0; font-size: 18px; font-weight: 600">No diabetes</p>
+      <p class="muted" style="margin: 2px 0 0">{% if patient.relative_of %}Tested as a relative of a patient with monogenic diabetes.{% else %}Tested without a diabetes diagnosis.{% endif %}
+        Treatment rules D1–D6 do not apply; a genetic risk level is shown instead.</p>
+    {% elif diagnosis %}
       <p style="margin: 12px 0 0; font-size: 18px; font-weight: 600">{{ diagnosis.diabetes_type.replace('type', 'Type ') if diagnosis.diabetes_type.startswith('type') else diagnosis.diabetes_type|capitalize }}</p>
       {% if diagnosis.age_at_diagnosis_months is not none %}
         <p class="muted" style="margin: 2px 0 0">diagnosed at
@@ -43,13 +49,46 @@
   </div>
 </div>
 
+{% if risk %}
+<section class="section">
+  <div class="card risk-card risk-{{ risk.level }} reveal" style="--i: 3">
+    <div class="risk-head">
+      <span class="risk-orb" aria-hidden="true">{{ icon('dna') }}</span>
+      <div>
+        <div class="eyebrow">Genetic risk</div>
+        <h2>{{ risk.label }}</h2>
+      </div>
+      <span class="spacer"></span>
+      {{ risk_badge(risk.level) }}
+    </div>
+    {% if not risk.tested %}
+      <p class="risk-meaning">No gene test yet. Upload their VCF below; the risk level is calculated straight away.</p>
+    {% else %}
+      <p class="risk-meaning">{{ risk.meaning }}</p>
+      {% if risk.findings %}
+        <ul class="risk-findings">
+          {% for a in risk.findings %}
+            {% set ra = risk_levels().assignment(a.rule_code) %}
+            <li>{{ risk_badge(ra.level if ra else 'uncertain') }}
+              <code>{{ a.patient_variant.gene }} {{ a.patient_variant.chrom }}:{{ a.patient_variant.pos }} {{ a.patient_variant.ref|truncate(10, True, '…') }}&gt;{{ a.patient_variant.alt|truncate(10, True, '…') }}</code>
+              {% if a.reclassified %}<span class="badge sev-low">{{ icon('refresh', 'icon') }}reclassified</span>{% endif %}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endif %}
+    <p class="small muted risk-foot">Advisory only: discuss the result with a genetic counsellor. Re-checked automatically whenever ClinVar changes.
+      Interpreted with ClinVar {{ release.version if release else '—' }} · risk levels v{{ risk.version }}.</p>
+  </div>
+</section>
+{% endif %}
+
 {% if clinical %}
 <section class="section">
-  <div class="section-head"><h2>Alerts</h2><span class="muted small">{{ open_alerts|length }} in force · newest knowledge first</span></div>
+  <div class="section-head"><h2>{{ 'Risk findings' if not patient.has_diabetes else 'Alerts' }}</h2><span class="muted small">{{ open_alerts|length }} in force · newest knowledge first</span></div>
   {% if open_alerts %}
     <div class="timeline">{% for a in open_alerts %}{{ alert_event(a, action_form, request.path, i=loop.index) }}{% endfor %}</div>
   {% else %}
-    <div class="card flat muted">No alerts for this patient.</div>
+    <div class="card flat muted">{{ "No risk findings: no variant raises this person's genetic risk." if not patient.has_diabetes else "No alerts for this patient." }}</div>
   {% endif %}
 </section>
 {% endif %}
@@ -154,6 +193,28 @@
     {% endif %}
   </section>
 </div>
+
+{% if relatives %}
+<section class="section">
+  <div class="section-head"><h2>Family</h2><span class="muted small">{% if patient.relative_of %}People tested because of {{ patient.relative_of.name }}{% else %}Relatives tested because of this patient (cascade testing, rule D5){% endif %}</span></div>
+  {% if ped %}<div class="card ped-card">{% include "patients/_pedigree.html" %}</div>{% endif %}
+  <div class="table-wrap" style="margin-top: 16px">
+  <table>
+    <thead><tr><th>Person</th><th>Relation</th><th>Diabetes</th>{% if clinical %}<th>Genetic risk</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for m in relatives %}
+      <tr>
+        <td><a class="person" href="{{ url_for('patients.detail', patient_id=m.patient.id) }}"><span class="avatar">{{ initials(m.patient.name) }}</span><span class="name">{{ m.patient.name }}</span></a></td>
+        <td>{{ m.relation|capitalize }}</td>
+        <td>{% if m.patient.has_diabetes %}<span class="badge sev-low">diabetes</span>{% else %}<span class="muted">none</span>{% endif %}</td>
+        {% if clinical %}<td>{% if m.level %}{{ risk_badge(m.level) }}{% else %}<span class="muted">—</span>{% endif %}</td>{% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}
 
 {% if clinical and past_alerts %}
 <section class="section">

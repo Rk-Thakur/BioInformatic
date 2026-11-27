@@ -8,7 +8,9 @@ from sqlalchemy import func, select
 from app.models import Alert, Patient, PatientVariant, ReevaluationRun
 from app.services.knowledge_import import current_release
 
-TREATMENT = (Alert.kind == "alert") & (Alert.severity != "info")
+# Treatment advice only (rules D1-D6). Genetic risk findings of people without diabetes
+# (codes G1-G5, Stage 7) are alerts too and still count as "waiting for review".
+TREATMENT = (Alert.kind == "alert") & (Alert.severity != "info") & Alert.rule_code.like("D%")
 
 
 @dataclass
@@ -25,6 +27,9 @@ class Overview:
     run_notes: dict = field(default_factory=dict)
     by_rule: list = field(default_factory=list)  # [(rule code, open treatment alerts)]
     recent: list = field(default_factory=list)  # newest unreviewed high-priority items
+    # Stage 7: people without diabetes by genetic risk level (incl. "untested").
+    without_diabetes: int = 0
+    risk_counts: dict = field(default_factory=dict)
 
 
 def unreviewed_count(session):
@@ -34,7 +39,8 @@ def unreviewed_count(session):
         .select_from(Alert)
         .where(
             Alert.status == "active",
-            (TREATMENT) | (Alert.kind == "review_notice"),
+            ((Alert.kind == "alert") & (Alert.severity != "info"))
+            | (Alert.kind == "review_notice"),
         )
     )
 
@@ -88,4 +94,13 @@ def overview(session):
             .limit(4)
         )
     )
+    from app.services.patient_view import risk_levels_for
+
+    healthy = list(session.scalars(select(Patient.id).where(~Patient.has_diabetes)))
+    o.without_diabetes = len(healthy)
+    levels = risk_levels_for(session, healthy)
+    o.risk_counts = {
+        lv: sum(v == lv for v in levels.values())
+        for lv in ("high", "mild", "uncertain", "normal", "untested")
+    }
     return o

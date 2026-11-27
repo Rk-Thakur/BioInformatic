@@ -458,3 +458,314 @@ html.reveal-done .reveal { animation: none; opacity: 1; transform: none; }
 .demo-login { margin-top: 22px; }
 .divider { display: flex; align-items: center; gap: 12px; color: var(--ink-3); font-size: 12.5px; margin-bottom: 4px; }
 .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+/* Stage 7: genetic risk for people without diabetes (DD46) */
+a.chip { display: inline-block; }
+a.chip:hover { text-decoration: none; color: var(--ink); }
+.risk-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.risk-high { color: var(--high); background: var(--high-bg); }
+.risk-mild { color: var(--medium); background: var(--medium-bg); }
+.risk-uncertain { color: var(--info); background: var(--info-bg); }
+.risk-normal { color: var(--ok); background: var(--ok-bg); }
+.risk-untested { color: var(--ink-3); background: var(--surface-2); }
+.risk-card { --tone: var(--info); --tone-bg: var(--info-bg); position: relative; overflow: hidden; border-left: 4px solid var(--tone); }
+.risk-card.risk-high { --tone: var(--high); --tone-bg: var(--high-bg); }
+.risk-card.risk-mild { --tone: var(--medium); --tone-bg: var(--medium-bg); }
+.risk-card.risk-normal { --tone: var(--ok); --tone-bg: var(--ok-bg); }
+.risk-card.risk-untested { --tone: var(--ink-3); --tone-bg: var(--surface-2); }
+.risk-card, .risk-card.risk-high, .risk-card.risk-mild, .risk-card.risk-normal, .risk-card.risk-uncertain, .risk-card.risk-untested { color: var(--ink); background: linear-gradient(120deg, var(--tone-bg), var(--surface) 55%); }
+.risk-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.risk-head h2 { margin: 2px 0 0; color: var(--tone); }
+.risk-orb { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 50%; background: var(--tone-bg); color: var(--tone); }
+.risk-meaning { margin: 14px 0 0; font-size: 15.5px; max-width: 70ch; }
+.risk-findings { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.risk-findings li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.risk-foot { margin: 16px 0 0; }
+.fieldset { border: 1px solid var(--line); border-radius: var(--radius-s); padding: 12px 16px 16px; margin: 20px 0 0; }
+.fieldset legend { padding: 0 6px; font-weight: 600; font-size: 14px; }
+
+/* Stage 7: family tree (DD48). Static without JS; app.js adds .animate, then .in-view. */
+.ped-card { padding: 22px 22px 16px; position: relative; overflow: hidden;
+  background:
+    radial-gradient(900px 320px at 12% -10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 60%),
+    radial-gradient(700px 300px at 100% 110%, color-mix(in srgb, var(--helix-b) 8%, transparent), transparent 60%),
+    var(--surface); }
+.ped-card::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .55;
+  background-image: radial-gradient(color-mix(in srgb, var(--ink-3) 30%, transparent) 1px, transparent 1.2px);
+  background-size: 18px 18px; mask-image: linear-gradient(to bottom, #000, transparent 85%); }
+.pedigree { position: relative; }
+.ped-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin-bottom: 14px; }
+.ped-title { margin: 2px 0 0; font-size: 17px; letter-spacing: -.01em; }
+.ped-stats { display: flex; gap: 6px; flex-wrap: wrap; }
+.ped-stat { display: inline-flex; align-items: baseline; gap: 5px; padding: 4px 11px; border-radius: 999px; font-size: 12.5px;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent); background: color-mix(in srgb, currentColor 8%, var(--surface)); }
+.ped-stat b { font-size: 15px; font-variant-numeric: tabular-nums; transition: transform .35s cubic-bezier(.3, 1.6, .5, 1); display: inline-block; }
+.ped-stat b.bump { transform: scale(1.35); }
+.ped-stat.carrier { color: var(--path); }
+.ped-stat.risk-high { background: color-mix(in srgb, var(--high) 8%, var(--surface)); }
+
+/* ClinVar timeline switch */
+.ped-bar { display: flex; align-items: center; gap: 16px 22px; flex-wrap: wrap; margin: 4px 0 2px; }
+.ped-timeline { position: relative; display: flex; gap: 0; padding: 0 4px; }
+.ped-track { position: absolute; left: 30px; right: 30px; top: 11px; height: 4px; border-radius: 4px; background: var(--line-2); overflow: hidden; }
+.ped-track-fill { position: absolute; inset: 0 auto 0 0; width: var(--fill, 100%); border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--helix-b)); transition: width .8s var(--ease); }
+.ped-stop { position: relative; border: 0; background: none; padding: 0 8px; min-width: 74px; cursor: pointer; color: var(--ink-3);
+  font: 500 11.5px/1.3 var(--font); display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.ped-stop .knob { width: 18px; height: 18px; border-radius: 50%; background: var(--surface); border: 3px solid var(--line-2);
+  box-shadow: 0 0 0 4px var(--surface); transition: border-color .3s, transform .35s cubic-bezier(.3, 1.6, .5, 1), background .3s; z-index: 1; }
+.ped-stop .lbl b { font-size: 12.5px; color: var(--ink-2); }
+.ped-stop:hover .knob { transform: scale(1.12); }
+.ped-stop.done .knob { border-color: var(--accent); }
+.ped-stop[aria-pressed="true"] { color: var(--ink-2); }
+.ped-stop[aria-pressed="true"] .knob { border-color: var(--accent); background: var(--accent); transform: scale(1.18);
+  box-shadow: 0 0 0 4px var(--surface), 0 0 0 8px color-mix(in srgb, var(--accent) 22%, transparent); }
+.ped-stop[aria-pressed="true"] .lbl b { color: var(--ink); }
+.ped-stop:focus-visible { outline: none; }
+.ped-stop:focus-visible .knob { box-shadow: 0 0 0 4px var(--surface), 0 0 0 7px var(--accent); }
+.ped-summary { margin: 10px 0 0; color: var(--ink-2); min-height: 1.4em; transition: opacity .3s; }
+.ped-summary::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; vertical-align: 1px;
+  background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+
+/* drawing */
+.ped-scroll { overflow-x: auto; margin: 4px -8px 0; padding: 0 8px; position: relative; }
+.ped-svg { display: block; margin: 0 auto; max-width: none; height: auto; font-family: var(--font); overflow: visible; }
+.ped-svg a { cursor: pointer; }
+.ped-svg a:focus-visible { outline: none; }
+.ped-svg a:focus-visible .ped-shape { stroke: var(--accent); stroke-width: 3.5; }
+.ped-band { fill: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+.ped-band.alt { fill: color-mix(in srgb, var(--accent) 4%, transparent); }
+.ped-gen-num { font-size: 18px; font-weight: 750; fill: color-mix(in srgb, var(--accent) 55%, var(--ink-3)); font-family: Georgia, "Times New Roman", serif; }
+.ped-gen-lbl { font-size: 10.5px; font-weight: 600; fill: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; }
+.ped-line { fill: none; stroke: color-mix(in srgb, var(--ink-3) 70%, transparent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ped-flow { fill: none; stroke: var(--path); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 2 9; opacity: 0;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--path) 55%, transparent)); transition: opacity .6s; }
+.ped-flow.on { opacity: 1; animation: ped-flow 1.1s linear infinite; }
+.ped-flow.still { animation: none; }
+
+.ped-node { transform-box: fill-box; transform-origin: center; }
+.ped-body { transform-box: fill-box; transform-origin: center; transition: transform .3s cubic-bezier(.3, 1.6, .5, 1); }
+.ped-svg a:hover .ped-body { transform: translateY(-3px) scale(1.06); }
+.ped-shape { fill: var(--surface); stroke: var(--ink-2); stroke-width: 2; transition: fill .7s var(--ease), stroke .7s var(--ease); }
+.lvl-high .ped-shape { fill: color-mix(in srgb, var(--high) 14%, var(--surface)); stroke: var(--high); }
+.lvl-mild .ped-shape { fill: color-mix(in srgb, var(--medium) 16%, var(--surface)); stroke: var(--medium); }
+.lvl-uncertain .ped-shape { fill: color-mix(in srgb, var(--info) 12%, var(--surface)); stroke: var(--info); }
+.lvl-normal .ped-shape { fill: color-mix(in srgb, var(--ok) 12%, var(--surface)); stroke: var(--ok); }
+.is-affected .ped-shape { fill: var(--ink); stroke: var(--ink); }
+.is-placeholder .ped-shape { fill: color-mix(in srgb, var(--surface) 60%, transparent); stroke: var(--ink-3); stroke-dasharray: 4 4; }
+.ped-age { font-size: 14px; font-weight: 700; text-anchor: middle; fill: var(--ink-2); font-variant-numeric: tabular-nums; pointer-events: none; }
+.is-affected .ped-age { fill: var(--bg); }
+.is-placeholder .ped-age { fill: var(--ink-3); font-weight: 600; }
+.lvl-high .ped-age { fill: var(--high); }
+.lvl-mild .ped-age { fill: var(--medium); }
+.lvl-normal .ped-age { fill: var(--ok); }
+
+.ped-ring, .ped-ripple { fill: none; stroke: currentColor; stroke-width: 3; transition: color .7s var(--ease); }
+.ped-ring { stroke-opacity: .55; }
+.ped-ring.risk-untested { stroke-dasharray: 3 4; stroke-width: 2; }
+.ped-ripple { opacity: 0; stroke-width: 3; transform-box: fill-box; transform-origin: center; }
+.ped-ripple.go { animation: ped-ripple 1.2s var(--ease); }
+.ped-ring.risk-high { animation: ped-glow 2.6s ease-in-out infinite; }
+.ped-ring.still { animation: none; stroke-opacity: 1; }
+.ped-halo { fill: color-mix(in srgb, var(--accent) 16%, transparent); stroke: color-mix(in srgb, var(--accent) 45%, transparent);
+  stroke-width: 1.5; stroke-dasharray: 3 5; animation: ped-breathe 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+
+.ped-badge { opacity: 0; transition: opacity .4s; }
+.ped-badge > * { transform-box: fill-box; transform-origin: center; }
+.is-carrier .ped-badge { opacity: 1; }
+.is-carrier .ped-badge-dot { animation: ped-badge-in .6s cubic-bezier(.3, 1.6, .5, 1) both; }
+.ped-badge-dot { fill: var(--path); stroke: var(--surface); stroke-width: 2.5; }
+.ped-badge-mark { fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ped-badge-pulse { fill: var(--path); opacity: 0; }
+.is-carrier .ped-badge-pulse { animation: ped-badge-pulse 2.4s ease-out infinite; }
+
+.ped-slash { stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; }
+.ped-arrow { stroke: var(--accent); stroke-width: 2.2; fill: none; stroke-linecap: round; }
+.ped-arrowhead { fill: var(--accent); }
+.ped-p { font-size: 12px; font-weight: 800; fill: var(--accent); text-anchor: middle; }
+.ped-name { font-size: 12.5px; font-weight: 650; fill: var(--ink); text-anchor: middle; font-family: var(--mono); }
+.ped-role, .ped-sub { font-size: 11px; fill: var(--ink-3); text-anchor: middle; }
+.ped-pill rect { fill: currentColor; fill-opacity: .14; stroke: currentColor; stroke-opacity: .35; transition: color .7s var(--ease), width .4s var(--ease), x .4s var(--ease); }
+.ped-pill text { font-size: 11px; font-weight: 700; fill: currentColor; text-anchor: middle; transition: color .7s var(--ease); }
+.ped-svg .risk-high, .ped-svg .risk-mild, .ped-svg .risk-uncertain, .ped-svg .risk-normal, .ped-svg .risk-untested { background: none; }
+
+.ped-legend { position: relative; display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; padding-top: 12px; border-top: 1px dashed var(--line-2); color: var(--ink-2); }
+.ped-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.ped-legend svg { overflow: visible; }
+.ped-legend .ped-shape { filter: none; }
+.ped-legend .ped-badge-dot { stroke-width: 0; }
+.ped-legend .ped-ring { color: var(--high); stroke-width: 2.5; }
+.ped-note { position: relative; display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0; }
+
+/* entrance: lines grow from the parents to each child, people pop in one after another */
+.pedigree.animate .ped-line { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.pedigree.animate.in-view .ped-line { animation: ped-draw .8s var(--ease) forwards; animation-delay: calc(var(--g) * 190ms + 160ms); }
+.pedigree.animate .ped-node, .pedigree.animate .ped-band, .pedigree.animate .ped-gen-num, .pedigree.animate .ped-gen-lbl { opacity: 0; }
+.pedigree.animate.in-view .ped-band, .pedigree.animate.in-view .ped-gen-num, .pedigree.animate.in-view .ped-gen-lbl { animation: ped-fade .7s var(--ease) forwards; }
+.pedigree.animate.in-view .ped-node { animation: ped-pop .65s cubic-bezier(.3, 1.45, .5, 1) forwards; animation-delay: calc(var(--o) * 90ms + 100ms); }
+.pedigree.animate .ped-flow.on { opacity: 0; }
+.pedigree.animate.in-view .ped-flow.on { opacity: 1; transition-delay: 1.5s; }
+
+@keyframes ped-draw { to { stroke-dashoffset: 0; } }
+@keyframes ped-fade { to { opacity: 1; } }
+@keyframes ped-pop { from { opacity: 0; transform: scale(.4) translateY(14px); } 70% { opacity: 1; } to { opacity: 1; transform: none; } }
+@keyframes ped-ripple { 0% { opacity: .95; transform: scale(1); } 100% { opacity: 0; transform: scale(2.1); } }
+@keyframes ped-glow { 0%, 100% { stroke-opacity: .55; stroke-width: 3; } 50% { stroke-opacity: 1; stroke-width: 5; } }
+@keyframes ped-breathe { 0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; } 50% { transform: scale(1.07) rotate(12deg); opacity: .65; } }
+@keyframes ped-flow { to { stroke-dashoffset: -11; } }
+@keyframes ped-badge-in { from { transform: scale(0); } to { transform: none; } }
+@keyframes ped-badge-pulse { 0% { opacity: .5; transform: scale(1); } 80%, 100% { opacity: 0; transform: scale(2.4); } }
+@media (prefers-reduced-motion: reduce) {
+  .pedigree.animate .ped-line { stroke-dasharray: none; stroke-dashoffset: 0; }
+  .pedigree.animate .ped-node, .pedigree.animate .ped-band, .pedigree.animate .ped-gen-num, .pedigree.animate .ped-gen-lbl { opacity: 1; }
+  .ped-ring.risk-high, .ped-halo, .ped-flow.on, .is-carrier .ped-badge-pulse { animation: none; }
+}
+@media (max-width: 760px) {
+  .ped-card { padding: 18px 14px 14px; }
+  .ped-stop { min-width: 64px; }
+}
+
+/* ================================================================== motion layer (DD49)
+   Ambient background, sliding nav highlight, scroll progress, card spotlight, button shine,
+   scroll reveal, page transitions. Everything degrades to the static design without JS
+   and stops under prefers-reduced-motion (global rule above). */
+
+/* ambient aurora + faint dot grid behind every page */
+body { isolation: isolate; }
+body::before, body::after { content: ""; position: fixed; pointer-events: none; }
+body::before { inset: -25vmax; z-index: -2;
+  background:
+    radial-gradient(38vmax 38vmax at 18% 22%, color-mix(in srgb, var(--accent) 17%, transparent), transparent 62%),
+    radial-gradient(34vmax 34vmax at 84% 14%, color-mix(in srgb, var(--helix-b) 15%, transparent), transparent 62%),
+    radial-gradient(42vmax 42vmax at 62% 96%, color-mix(in srgb, var(--accent-2) 11%, transparent), transparent 62%);
+  animation: aurora 34s ease-in-out infinite alternate; will-change: transform; }
+body::after { inset: 0; z-index: -1; opacity: .5;
+  background-image: radial-gradient(color-mix(in srgb, var(--ink-3) 22%, transparent) 1px, transparent 1.3px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 0%, transparent 75%); }
+@keyframes aurora {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  50% { transform: translate3d(3vmax, -2vmax, 0) rotate(7deg) scale(1.05); }
+  100% { transform: translate3d(-3vmax, 2.5vmax, 0) rotate(-5deg) scale(1); }
+}
+
+/* top bar: lifts once you scroll; a progress line shows how far down you are */
+.topbar { transition: box-shadow .3s var(--ease), background .3s; view-transition-name: topbar; }
+.topbar.scrolled { box-shadow: 0 6px 24px -12px rgba(0, 0, 0, .35); background: color-mix(in srgb, var(--bg) 72%, transparent); }
+.scroll-progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; transform-origin: 0 50%; transform: scaleX(0);
+  background: linear-gradient(90deg, var(--accent), var(--helix-b), var(--accent-2)); pointer-events: none; }
+
+/* sliding highlight under the menu */
+.nav.has-glider a.active { background: transparent; box-shadow: none; }
+.nav a { z-index: 1; }
+.nav-glider { position: absolute; left: 0; top: 0; height: 100%; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow);
+  transition: transform .45s cubic-bezier(.3, 1.25, .5, 1), width .45s cubic-bezier(.3, 1.25, .5, 1), opacity .3s; z-index: 0; pointer-events: none; }
+.nav-glider::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: 3px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--helix-b)); }
+.nav a .count { animation: count-pulse 2.8s ease-in-out infinite; }
+@keyframes count-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--high) 45%, transparent); } 50% { box-shadow: 0 0 0 5px transparent; } }
+
+/* cards: a soft light follows the cursor, the edge glows near it */
+.card { position: relative; }
+.spot { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .35s var(--ease); }
+.spot::before { content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--accent) 8%, transparent), transparent 55%); }
+.spot::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--accent) 70%, transparent), transparent 60%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+.card:hover > .spot { opacity: 1; }
+.card.hover { transition: transform .35s var(--ease), box-shadow .35s var(--ease); }
+.card.hover:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+
+/* buttons: a light sweep on hover, a ripple where you click */
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+.btn.accent::after { content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 45%; z-index: -1; transform: skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .45), transparent); transition: left .7s var(--ease); }
+.btn.accent:hover::after { left: 120%; }
+.btn.accent { background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 72%, var(--helix-b))); }
+.btn .ripple { position: absolute; border-radius: 50%; pointer-events: none; transform: scale(0); opacity: .35; background: currentColor;
+  animation: ripple .6s var(--ease) forwards; }
+@keyframes ripple { to { transform: scale(2.6); opacity: 0; } }
+
+/* sections rise into view as you scroll (only below the fold, only with JS) */
+html.js .sr { opacity: 0; transform: translateY(22px) scale(.99); }
+html.js .sr.sr-in { opacity: 1; transform: none; transition: opacity .75s var(--ease), transform .75s var(--ease); transition-delay: var(--sr-d, 0ms); }
+
+/* animated gradient text */
+.grad-text { background: linear-gradient(92deg, var(--accent), var(--helix-b) 45%, var(--accent-2) 70%, var(--accent));
+  background-size: 220% auto; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: grad-pan 7s linear infinite; }
+@keyframes grad-pan { to { background-position: 220% center; } }
+
+/* stat tiles: the accent tile shimmers, icons float on hover */
+.stat.accent { background-size: 180% 180%; animation: tile-shift 9s ease-in-out infinite alternate; }
+@keyframes tile-shift { from { background-position: 0% 30%; } to { background-position: 100% 70%; } }
+.stat .glyph { transition: transform .4s cubic-bezier(.3, 1.6, .5, 1); }
+.stat:hover .glyph { transform: translateY(-3px) rotate(-8deg) scale(1.12); }
+
+/* re-evaluation flow: a pulse travels along each connector */
+.flow-node + .flow-node::after { content: ""; position: absolute; left: -18px; top: 34px; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: flow-dot 2.2s var(--ease) infinite; animation-delay: calc(var(--k, 0) * 350ms); }
+@keyframes flow-dot { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateX(30px); opacity: 0; } }
+.flow-node .ring { transition: transform .4s cubic-bezier(.3, 1.6, .5, 1), box-shadow .4s; }
+.flow-node:hover .ring { transform: scale(1.12); box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 15%, transparent); }
+@media (max-width: 720px) { .flow-node + .flow-node::after { display: none; } }
+
+/* tables: rows glide in and light up on hover */
+tbody tr { transition: background .25s; }
+tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+tbody tr:hover td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+html.js .table-wrap.sr-rows tbody tr { opacity: 0; transform: translateX(-8px); }
+html.js .table-wrap.sr-rows.sr-in tbody tr { opacity: 1; transform: none; transition: opacity .5s var(--ease), transform .5s var(--ease);
+  transition-delay: calc(min(var(--r, 0), 14) * 35ms); }
+
+/* timeline events slide in */
+.event .card { transition: transform .35s var(--ease), box-shadow .35s var(--ease); }
+.event:hover .card { transform: translateX(4px); box-shadow: var(--shadow-lift); }
+
+/* genetic risk donut (overview) */
+.donut-wrap { display: grid; grid-template-columns: 136px minmax(0, 1fr); gap: 20px; align-items: center; }
+.donut { width: 136px; height: 136px; transform: rotate(-90deg); overflow: visible; }
+.donut circle { fill: none; stroke-width: 14; }
+.donut .track { stroke: var(--surface-2); }
+.donut .seg { stroke: currentColor; stroke-linecap: butt; transition: stroke-width .3s; }
+.donut .seg:hover { stroke-width: 18; }
+html.js .donut .seg { stroke-dasharray: 0 100; }
+html.js .donut.on .seg { animation: donut-grow 1.2s var(--ease) forwards; animation-delay: calc(var(--d, 0) * 160ms + 150ms); }
+@keyframes donut-grow { to { stroke-dasharray: var(--p) calc(100 - var(--p)); } }
+.donut-center { position: relative; }
+.donut-center .total { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
+.donut-center .total b { display: block; font-size: 30px; letter-spacing: -.02em; line-height: 1; }
+.donut-center .total span { font-size: 11.5px; color: var(--ink-3); }
+.donut-legend { display: grid; gap: 8px; }
+.donut-legend .row { display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: center; gap: 10px; }
+.donut-legend .row strong { font-size: 15px; }
+@media (max-width: 520px) { .donut-wrap { grid-template-columns: 1fr; justify-items: center; } }
+
+/* hero particles (home page) */
+.particles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.particles i { position: absolute; bottom: -12px; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 55%, var(--helix-b)); opacity: 0; filter: blur(.3px);
+  animation: rise-p var(--t) linear infinite; animation-delay: var(--dl); }
+@keyframes rise-p { 0% { transform: translateY(0) translateX(0); opacity: 0; } 12% { opacity: .55; } 80% { opacity: .35; }
+  100% { transform: translateY(-110vh) translateX(var(--dx)); opacity: 0; } }
+.hero-inner { position: relative; z-index: 1; }
+.float-card { animation: float-y 6s ease-in-out infinite; }
+.float-card.fc-2 { animation-delay: -3s; }
+@keyframes float-y { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+/* page-to-page transition (browsers with cross-document view transitions) */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: vt-out .22s ease both; }
+::view-transition-new(root) { animation: vt-in .38s var(--ease) both; }
+@keyframes vt-out { to { opacity: 0; transform: translateY(-6px); } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(10px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+  html.js .sr, html.js .table-wrap.sr-rows tbody tr { opacity: 1; transform: none; }
+  html.js .donut .seg { stroke-dasharray: var(--p) calc(100 - var(--p)); }
+  .particles { display: none; }
+}

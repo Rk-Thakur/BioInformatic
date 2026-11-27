@@ -22,9 +22,11 @@ from app.models import (
     GeneTranscript,
     KbRelease,
     KnownVariant,
+    RiskLevelSet,
     Rule,
     audit,
 )
+from app.models.base import utcnow
 from app.services.rules import load_rules_file
 
 BATCH = 2_000
@@ -54,6 +56,12 @@ def _sha256(path):
 
 def _bool(v):
     return str(v).strip() in ("1", "true", "True")
+
+
+def _float(v):
+    """Optional number column (empty or missing in files cleaned before C15 -> None)."""
+    v = (v or "").strip()
+    return float(v) if v else None
 
 
 # --------------------------------------------------------------------------- releases
@@ -131,6 +139,7 @@ def import_release(session, path, *, make_current=None):
                 "disease": r["disease"],
                 "long_indel": _bool(r["long_indel"]),
                 "outside_gene": _bool(r["outside_gene"]),
+                "allele_frequency": _float(r.get("allele_frequency")),
             }
         )
         if len(batch) >= BATCH:
@@ -154,6 +163,89 @@ def import_release(session, path, *, make_current=None):
 
 def current_release(session):
     return session.scalar(select(KbRelease).where(KbRelease.is_current))
+
+
+def update_allele_frequencies(session, path):
+    """Fill KnownVariant.allele_frequency for a release imported before C15 (DD47).
+
+    Only fills empty values from the cleaned file of the same release; classifications
+    are never touched. Returns the number of records updated.
+    """
+    comments, rows = _read_tsv(path)
+    version = next(
+        (m.group(1) for c in comments if (m := re.fullmatch(r"ClinVar release (\S+)", c))), None
+    )
+    release = session.scalar(select(KbRelease).where(KbRelease.version == version))
+    if release is None:
+        raise KnowledgeImportError(f"{path}: release {version} is not imported")
+    af = {
+        (r["chrom"], int(r["pos"]), r["ref"], r["alt"]): _float(r.get("allele_frequency"))
+        for r in rows
+    }
+    updated = 0
+    for kv in session.scalars(
+        select(KnownVariant).where(
+            KnownVariant.release_id == release.id, KnownVariant.allele_frequency.is_(None)
+        )
+    ):
+        value = af.get((kv.chrom, kv.pos, kv.ref, kv.alt))
+        if value is not None:
+            kv.allele_frequency = value
+            updated += 1
+    if updated:
+        audit(session, "update_allele_frequencies", "kb_release", release.id, updated=updated)
+    return updated
+
+
+# --------------------------------------------------------------------------- risk levels
+
+
+def import_risk_levels(session, path, *, make_current=None):
+    """Import one genetic risk levels file (data/curated/risk_levels_vN.yaml, DD47).
+
+    The file is validated (app.services.risk). A version that already exists must be
+    byte-identical. make_current: None = current only if no version is current yet;
+    later versions stay pending until `apply-risk-levels` re-evaluates.
+    Returns (RiskLevelSet, added?).
+    """
+    from app.services.risk import parse_risk_levels_text
+
+    path = Path(path)
+    content = path.read_text()
+    levels = parse_risk_levels_text(content)  # raises RiskLevelsError if invalid
+    digest = hashlib.sha256(content.encode()).hexdigest()
+    existing = session.scalar(select(RiskLevelSet).where(RiskLevelSet.version == levels.version))
+    if existing:
+        if existing.source_sha256 != digest:
+            raise KnowledgeImportError(
+                f"risk levels v{levels.version} already exist with different content; "
+                "versions are immutable, add a new version instead"
+            )
+        return existing, False
+    current = session.scalar(select(RiskLevelSet).where(RiskLevelSet.is_current))
+    activate = (current is None) if make_current is None else make_current
+    if activate and current is not None:
+        current.is_current = False
+        session.flush()
+    rs = RiskLevelSet(
+        version=levels.version,
+        content=content,
+        source_file=path.name,
+        source_sha256=digest,
+        is_current=activate,
+        applied_at=utcnow() if activate else None,  # in force from now; later "retired"
+    )
+    session.add(rs)
+    session.flush()
+    audit(
+        session,
+        "import_risk_levels",
+        "risk_level_set",
+        rs.id,
+        version=rs.version,
+        current=activate,
+    )
+    return rs, True
 
 
 # --------------------------------------------------------------------------- expert panel

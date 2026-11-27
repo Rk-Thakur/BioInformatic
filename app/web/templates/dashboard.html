@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% from "icons.html" import icon %}
-{% from "macros.html" import alert_event %}
+{% from "macros.html" import alert_event, risk_badge %}
 {% block title %}Overview{% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
     <div class="eyebrow reveal">Overview</div>
-    <h1 class="reveal" style="--i: 1">Good to see you, {{ current_user.username }}</h1>
+    <h1 class="reveal" style="--i: 1">Good to see you, <span class="grad-text">{{ current_user.username }}</span></h1>
     <p class="lede reveal" style="--i: 2">
       Interpreting with ClinVar <strong>{{ o.release.version if o.release else '—' }}</strong>.
       {% if o.unreviewed %}{{ o.unreviewed }} item{{ 's' if o.unreviewed != 1 }} wait for your review.{% else %}Nothing waits for review.{% endif %}
@@ -26,7 +26,7 @@
     <span class="glyph">{{ icon('users') }}</span>
     <div class="label">Patients</div>
     <div class="value" data-count="{{ o.patients }}">{{ '{:,}'.format(o.patients) }}</div>
-    <div class="hint">{{ o.active_patients }} active · {{ o.patients - o.active_patients }} deceased</div>
+    <div class="hint">{{ o.active_patients }} active · {{ o.patients - o.active_patients }} deceased{% if o.without_diabetes %} · {{ o.without_diabetes }} without diabetes{% endif %}</div>
   </div>
   <div class="card stat hover reveal" style="--i: 3">
     <span class="glyph">{{ icon('dna') }}</span>
@@ -56,10 +56,10 @@
     </div>
     {% if o.last_run %}
       <div class="flow">
-        <div class="flow-node"><div class="ring">{{ icon('search') }}</div><div class="n" data-count="{{ o.last_run.variants_examined }}">{{ '{:,}'.format(o.last_run.variants_examined) }}</div><div class="l">stored variants checked</div></div>
-        <div class="flow-node"><div class="ring">{{ icon('refresh') }}</div><div class="n" data-count="{{ o.last_run.variants_changed }}">{{ '{:,}'.format(o.last_run.variants_changed) }}</div><div class="l">changed classification</div></div>
-        <div class="flow-node"><div class="ring">{{ icon('users') }}</div><div class="n" data-count="{{ o.last_run.patients_touched }}">{{ '{:,}'.format(o.last_run.patients_touched) }}</div><div class="l">patients re-evaluated</div></div>
-        <div class="flow-node"><div class="ring">{{ icon('bell') }}</div><div class="n" data-count="{{ o.last_run.alerts_created }}">{{ '{:,}'.format(o.last_run.alerts_created) }}</div><div class="l">new alerts · {{ o.last_run.alerts_superseded }} superseded</div></div>
+        <div class="flow-node" style="--k: 0"><div class="ring">{{ icon('search') }}</div><div class="n" data-count="{{ o.last_run.variants_examined }}">{{ '{:,}'.format(o.last_run.variants_examined) }}</div><div class="l">stored variants checked</div></div>
+        <div class="flow-node" style="--k: 1"><div class="ring">{{ icon('refresh') }}</div><div class="n" data-count="{{ o.last_run.variants_changed }}">{{ '{:,}'.format(o.last_run.variants_changed) }}</div><div class="l">changed classification</div></div>
+        <div class="flow-node" style="--k: 2"><div class="ring">{{ icon('users') }}</div><div class="n" data-count="{{ o.last_run.patients_touched }}">{{ '{:,}'.format(o.last_run.patients_touched) }}</div><div class="l">people re-evaluated</div></div>
+        <div class="flow-node" style="--k: 3"><div class="ring">{{ icon('bell') }}</div><div class="n" data-count="{{ o.last_run.alerts_created }}">{{ '{:,}'.format(o.last_run.alerts_created) }}</div><div class="l">new alerts · {{ o.last_run.alerts_superseded }} superseded</div></div>
       </div>
       {% if o.run_notes %}
         <p class="flow-meta">
@@ -103,6 +103,36 @@
         <p class="muted" style="margin: 0">No treatment advice in force.</p>
       {% endfor %}
     </div>
+    {% if o.without_diabetes %}
+    <div class="section-head" style="margin-top: 28px"><h2>Genetic risk in relatives</h2>
+      <a class="small" href="{{ url_for('patients.index', group='no_diabetes') }}">{{ o.without_diabetes }} people {{ icon('arrow', 'icon') }}</a></div>
+    <div class="card reveal" style="--i: 7">
+      <p class="muted small" style="margin: 0 0 14px">People without diabetes, tested because a relative has monogenic diabetes.</p>
+      {% set levels = ['high', 'mild', 'uncertain', 'normal', 'untested'] %}
+      {% set colours = {'high': 'var(--high)', 'mild': 'var(--medium)', 'uncertain': 'var(--info)', 'normal': 'var(--ok)', 'untested': 'var(--ink-3)'} %}
+      {% set total = o.risk_counts.values()|sum %}
+      <div class="donut-wrap">
+        <div class="donut-center">
+          <svg class="donut" viewBox="0 0 120 120" role="img" aria-label="Genetic risk of {{ total }} relatives">
+            <circle class="track" cx="60" cy="60" r="46" pathLength="100"/>
+            {% set ns = namespace(off=0, d=0) %}
+            {% for lv in levels if o.risk_counts.get(lv) %}
+              {% set pct = 100 * o.risk_counts[lv] / total %}
+              <circle class="seg" cx="60" cy="60" r="46" pathLength="100" style="color: {{ colours[lv] }}; --p: {{ (pct - 0.6)|round(2) }}; --d: {{ ns.d }}"
+                      stroke-dasharray="{{ (pct - 0.6)|round(2) }} {{ (100 - pct + 0.6)|round(2) }}" stroke-dashoffset="{{ -ns.off|round(2) }}"><title>{{ o.risk_counts[lv] }} {{ lv }}</title></circle>
+              {% set ns.off = ns.off + pct %}{% set ns.d = ns.d + 1 %}
+            {% endfor %}
+          </svg>
+          <div class="total"><div><b data-count="{{ total }}">{{ total }}</b><span>relatives</span></div></div>
+        </div>
+        <div class="donut-legend">
+          {% for lv in levels if o.risk_counts.get(lv) %}
+            <div class="row">{{ risk_badge(lv) }}<strong class="tnum">{{ o.risk_counts[lv] }}</strong></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
   </section>
 </div>
 {% endblock %}

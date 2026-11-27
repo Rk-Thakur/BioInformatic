@@ -70,6 +70,8 @@ class KnownVariant(db.Model):
     disease: Mapped[str] = mapped_column(String(2000))
     long_indel: Mapped[bool]
     outside_gene: Mapped[bool]
+    # Stage 7 (DD47): highest population allele frequency ClinVar reports (C15), if any.
+    allele_frequency: Mapped[float | None]
 
     release: Mapped[KbRelease] = relationship(back_populates="variants")
 
@@ -161,3 +163,32 @@ class Rule(db.Model):
 
     def __repr__(self):
         return f"<Rule {self.code} v{self.version}{' current' if self.is_current else ''}>"
+
+
+class RiskLevelSet(db.Model):
+    """One version of the genetic risk levels for people without diabetes (DD42, DD47).
+
+    Stored as the YAML text it was imported from, validated on import. Like rules:
+    a later version is imported as pending and becomes current only through
+    re-evaluation (`flask apply-risk-levels`).
+    """
+
+    __tablename__ = "risk_level_set"
+    __table_args__ = (
+        Index(
+            "uq_risk_level_set_current",
+            "is_current",
+            unique=True,
+            sqlite_where=text("is_current = 1"),
+            postgresql_where=text("is_current"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    version: Mapped[int] = mapped_column(unique=True)
+    content: Mapped[str] = mapped_column(db.Text)
+    source_file: Mapped[str] = mapped_column(String(255))
+    source_sha256: Mapped[str] = mapped_column(String(64))
+    is_current: Mapped[bool] = mapped_column(default=False)
+    imported_at: Mapped[datetime] = mapped_column(default=utcnow)
+    applied_at: Mapped[datetime | None]

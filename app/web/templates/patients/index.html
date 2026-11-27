@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% from "icons.html" import icon %}
-{% from "macros.html" import initials %}
+{% from "macros.html" import initials, risk_badge %}
 {% block title %}Patients{% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
     <div class="eyebrow reveal">Registry</div>
     <h1 class="reveal" style="--i: 1">Patients</h1>
-    <p class="lede reveal" style="--i: 2">{{ '{:,}'.format(total) }} patient{{ 's' if total != 1 }}{% if q %} matching “{{ q }}”{% endif %}.</p>
+    <p class="lede reveal" style="--i: 2">{{ '{:,}'.format(total) }} {{ 'people' if group == 'no_diabetes' else ('patient' if total == 1 else 'patients') }}{% if q %} matching “{{ q }}”{% endif %}.</p>
   </div>
   <div class="row reveal" style="--i: 3">
     <form method="get" class="search" role="search">
@@ -18,35 +18,43 @@
   </div>
 </div>
 
+<div class="chipbar reveal" style="--i: 3; margin-bottom: 16px" role="group" aria-label="Show">
+  {% set all_n = group_counts.diabetes + group_counts.no_diabetes %}
+  <a class="chip" href="{{ url_for('patients.index', q=q or None) }}" aria-pressed="{{ 'true' if not group else 'false' }}">Everyone<span class="n">{{ all_n }}</span></a>
+  <a class="chip" href="{{ url_for('patients.index', q=q or None, group='diabetes') }}" aria-pressed="{{ 'true' if group == 'diabetes' else 'false' }}">With diabetes<span class="n">{{ group_counts.diabetes }}</span></a>
+  <a class="chip" href="{{ url_for('patients.index', q=q or None, group='no_diabetes') }}" aria-pressed="{{ 'true' if group == 'no_diabetes' else 'false' }}">Without diabetes<span class="n">{{ group_counts.no_diabetes }}</span></a>
+</div>
+
 <div class="table-wrap reveal" style="--i: 4">
 <table>
-  <thead><tr><th>Patient</th><th>Family</th><th>Status</th>{% if current_user.can_view_recommendations() %}<th>Unreviewed</th>{% endif %}</tr></thead>
+  <thead><tr><th>Patient</th><th>Family</th><th>Status</th>{% if current_user.can_view_recommendations() %}<th>Genetic risk</th><th>Unreviewed</th>{% endif %}</tr></thead>
   <tbody>
   {% for p in patients %}
     <tr>
       <td>
         <a class="person" href="{{ url_for('patients.detail', patient_id=p.id) }}">
           <span class="avatar">{{ initials(p.name) }}</span>
-          <span><span class="name">{{ p.name }}</span><br><span class="sub mono">{{ p.external_id[:18] }}</span></span>
+          <span><span class="name">{{ p.name }}</span><br><span class="sub mono">{{ p.external_id[:18] }}</span>{% if not p.has_diabetes %} <span class="sub">· no diabetes</span>{% endif %}</span>
         </a>
       </td>
       <td>{% if p.family_id %}<span class="badge sev-low">{{ p.family_id }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
       <td>{% if p.is_active %}<span class="badge ok">active</span>{% else %}<span class="badge sev-info">inactive</span>{% endif %}</td>
       {% if current_user.can_view_recommendations() %}
+        <td>{% if risk_levels.get(p.id) %}{{ risk_badge(risk_levels[p.id]) }}{% else %}<span class="muted">—</span>{% endif %}</td>
         <td>{% if open_counts.get(p.id) %}<span class="badge sev-high">{{ open_counts[p.id] }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
       {% endif %}
     </tr>
   {% else %}
-    <tr><td colspan="4" class="muted" style="padding: 32px; text-align: center">No patients{% if q %} match “{{ q }}”{% endif %}.</td></tr>
+    <tr><td colspan="5" class="muted" style="padding: 32px; text-align: center">No patients{% if q %} match “{{ q }}”{% endif %}.</td></tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
 {% if pages > 1 %}
 <div class="row" style="justify-content: center; margin-top: 20px">
-  {% if page > 1 %}<a class="btn ghost sm" href="{{ url_for('patients.index', q=q, page=page-1) }}">Previous</a>{% endif %}
+  {% if page > 1 %}<a class="btn ghost sm" href="{{ url_for('patients.index', q=q or None, group=group or None, page=page-1) }}">Previous</a>{% endif %}
   <span class="muted small">Page {{ page }} of {{ pages }}</span>
-  {% if page < pages %}<a class="btn ghost sm" href="{{ url_for('patients.index', q=q, page=page+1) }}">Next</a>{% endif %}
+  {% if page < pages %}<a class="btn ghost sm" href="{{ url_for('patients.index', q=q or None, group=group or None, page=page+1) }}">Next</a>{% endif %}
 </div>
 {% endif %}
 {% endblock %}

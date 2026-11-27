@@ -44,7 +44,21 @@ class PatientForm(FlaskForm):
             SelectChoice("type2", "Type 2"),
             SelectChoice("neonatal", "Neonatal"),
             SelectChoice("unknown", "Unknown"),
+            SelectChoice("none", "No diabetes (e.g. a relative offered testing)"),
         ],
+    )
+    relative_of = StringField(
+        "Relative of (patient ID, optional)", validators=[Optional(), Length(max=64)]
+    )
+    relation = SelectField(
+        "Relation to that patient",
+        choices=[
+            SelectChoice("", "—"),
+            SelectChoice("parent", "Parent"),
+            SelectChoice("sibling", "Sibling"),
+            SelectChoice("child", "Child"),
+        ],
+        validators=[Optional()],
     )
     age_at_diagnosis_years = DecimalField(
         "Age at diagnosis in years (0.25 = 3 months)",

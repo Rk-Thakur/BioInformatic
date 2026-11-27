@@ -34,10 +34,32 @@ def test_cli_commands_registered(runner):
     assert "PANEL_GENES" in result.output
 
 
-def test_production_requires_secret_key(monkeypatch):
+def test_production_requires_secret_key(monkeypatch, tmp_path):
     monkeypatch.setattr(ProductionConfig, "SECRET_KEY", "dev-only-not-secret")
+    monkeypatch.setattr(ProductionConfig, "SECRET_KEY_FILE", str(tmp_path / "absent"))
+    monkeypatch.delenv("SECRET_KEY", raising=False)
     with pytest.raises(RuntimeError):
         create_app("production")
+
+
+def test_production_reads_secret_key_file(monkeypatch, tmp_path):
+    """`docker compose exec web flask ...` has no SECRET_KEY variable; the key the
+    entrypoint wrote to the instance folder is used instead."""
+    key = tmp_path / "secret_key"
+    key.write_text("from-the-file\n")
+    monkeypatch.setattr(ProductionConfig, "SECRET_KEY", "dev-only-not-secret")
+    monkeypatch.setattr(ProductionConfig, "SECRET_KEY_FILE", str(key))
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    app = create_app("production", overrides={"SQLALCHEMY_DATABASE_URI": "sqlite://"})
+    assert app.config["SECRET_KEY"] == "from-the-file"
+    monkeypatch.setenv("SECRET_KEY", "x")  # the environment wins when it is set
+    monkeypatch.setattr(ProductionConfig, "SECRET_KEY", "from-the-env")
+    assert (
+        create_app("production", overrides={"SQLALCHEMY_DATABASE_URI": "sqlite://"}).config[
+            "SECRET_KEY"
+        ]
+        == "from-the-env"
+    )
 
 
 def test_sqlite_foreign_keys_enforced(session):

@@ -6,10 +6,13 @@
 
   {# ---------------------------------------------------------------- hero #}
   <section class="hero">
+    <div class="particles" aria-hidden="true">
+      {% for i in range(22) %}<i style="--x: {{ (i * 37) % 100 }}%; --s: {{ 3 + (i * 7) % 6 }}px; --t: {{ 9 + (i * 5) % 9 }}s; --dl: -{{ (i * 13) % 17 }}s; --dx: {{ ((i * 23) % 60) - 30 }}px"></i>{% endfor %}
+    </div>
     <div class="hero-inner">
       <div class="hero-copy">
         <div class="eyebrow reveal">Monogenic diabetes · Genomic-Enhanced EHR</div>
-        <h1 class="reveal" style="--i: 1">When the science changes, the doctor hears about it.</h1>
+        <h1 class="reveal" style="--i: 1">When the science changes, <span class="grad-text">the doctor hears about it.</span></h1>
         <p class="lede reveal" style="--i: 2">GE-EHR stores each patient's genetic test results, checks them against the latest
           ClinVar knowledge, and tells the clinician when a reclassified variant means a different treatment.
           For example, tablets instead of insulin injections.</p>

@@ -364,3 +364,143 @@ def test_demo_login_refuses_real_accounts(client, app, demo_users):
     assert client.post("/login/demo", data={"username": "clinician"}).status_code == 403
     assert client.post("/login/demo", data={"username": "admin"}).status_code == 403
     assert client.get("/patients/").status_code == 302  # still logged out
+
+
+# ------------------------------------------------------------------ Stage 7: genetic risk
+
+
+def add_relative(client, world, name="Rel One", relative_of="fam1", diabetes="none"):
+    return client.post(
+        "/patients/new",
+        data={
+            "name": name,
+            "sex": "F",
+            "diabetes_type": diabetes,
+            "relative_of": world[relative_of].external_id if relative_of else "",
+            "relation": "child",
+        },
+    )
+
+
+def upload(client, patient_id, variants, tmp_path):
+    from tests.factories import write_vcf
+
+    vcf = write_vcf(tmp_path / f"rel{patient_id}.vcf", [(*v, "0/1") for v in variants])
+    return client.post(
+        f"/patients/{patient_id}/upload",
+        data={"vcf": (io.BytesIO(vcf.read_bytes()), "rel.vcf")},
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+
+
+def test_new_person_without_diabetes_linked_to_family(client, world):
+    login(client, "clinician")
+    assert add_relative(client, world).status_code == 302
+    rel = db.session.scalar(select(Patient).where(Patient.name == "Rel One"))
+    assert rel.has_diabetes is False and not rel.diagnoses
+    assert rel.relative_of_id == world["fam1"].id and rel.relation == "child"
+
+    page = client.get(f"/patients/{rel.id}").data
+    assert b"No diabetes" in page and b"Not tested yet" in page
+    assert b"Rel One" in client.get(f"/patients/{world['fam1'].id}").data  # family section
+
+
+def test_new_patient_relative_errors(client, world, session):
+    login(client, "clinician")
+    resp = add_relative(client, world, relative_of=None)
+    assert resp.status_code == 302  # no link is fine
+    resp = client.post(
+        "/patients/new",
+        data={"name": "X", "diabetes_type": "none", "relative_of": "nope", "relation": "child"},
+    )
+    assert resp.status_code == 400 and b"No patient with this ID." in resp.data
+    resp = client.post(
+        "/patients/new",
+        data={"name": "X", "diabetes_type": "none", "relative_of": "fam", "relation": "child"},
+    )
+    assert resp.status_code == 400 and b"More than one patient matches" in resp.data
+    resp = client.post(
+        "/patients/new",
+        data={"name": "X", "diabetes_type": "none", "relative_of": "fam1", "relation": ""},
+    )
+    assert resp.status_code == 400 and b"Choose how they are related." in resp.data
+
+
+def test_risk_card_follows_reclassification(client, world, session, tmp_path):
+    """A healthy relative carrying the family's HNF1A variant: uncertain while it is a
+    VUS, high risk (reclassified, high priority) once ClinVar calls it LP."""
+    from tests.test_reevaluate import A
+
+    login(client, "clinician")
+    add_relative(client, world)
+    rel = db.session.scalar(select(Patient).where(Patient.name == "Rel One"))
+    resp = upload(client, rel.id, [A], tmp_path)
+    assert b"VCF accepted" in resp.data and b"1 new alert" in resp.data
+
+    page = client.get(f"/patients/{rel.id}").data
+    assert b"risk-card risk-uncertain" in page and b"Risk findings" in page
+    assert b"Rule D" not in page  # never treatment advice
+
+    reevaluate_release(session, "2026-10-19", AS_OF)
+    session.commit()
+    page = client.get(f"/patients/{rel.id}").data
+    assert b"risk-card risk-high" in page and b"High genetic risk" in page
+    assert b"Genetic risk \xc2\xb7 High genetic risk" in page  # alert label
+    assert b"risk levels v1 \xc2\xb7 G1" in page  # provenance line
+    worklist = client.get("/alerts/").data
+    assert b"Rel One" in worklist and b"high priority" in worklist
+
+    listing = client.get("/patients/?group=no_diabetes").data
+    assert b"Rel One" in listing and b"risk-high" in listing and b"fam2" not in listing
+    assert b"Rel One" not in client.get("/patients/?group=diabetes").data
+    overview = client.get("/overview").data
+    assert b"Genetic risk in relatives" in overview and b"risk-badge risk-high" in overview
+    knowledge = client.get("/knowledge/").data
+    assert b"Genetic risk levels" in knowledge and b"G1" in knowledge
+
+
+def test_lab_tech_never_sees_risk(client, world, session, tmp_path):
+    from tests.test_reevaluate import A
+
+    login(client, "clinician")
+    add_relative(client, world)
+    rel = db.session.scalar(select(Patient).where(Patient.name == "Rel One"))
+    upload(client, rel.id, [A], tmp_path)
+    client.post("/logout")
+
+    login(client, "lab_tech")
+    page = client.get(f"/patients/{rel.id}").data
+    assert b"No diabetes" in page and b"HNF1A" in page  # record and variants: yes
+    assert b"risk-card" not in page and b"Risk findings" not in page and b"Genetic risk" not in page
+    fam = client.get(f"/patients/{world['fam1'].id}").data
+    assert b"Rel One" in fam and b"risk-badge" not in fam
+    listing = client.get("/patients/?group=no_diabetes").data
+    assert b"Rel One" in listing and b"Genetic risk" not in listing and b"risk-badge" not in listing
+
+
+def test_family_tree_on_both_pages(client, world, session, tmp_path):
+    from tests.test_reevaluate import A
+
+    login(client, "clinician")
+    add_relative(client, world)
+    rel = db.session.scalar(select(Patient).where(Patient.name == "Rel One"))
+    upload(client, rel.id, [A], tmp_path)
+    reevaluate_release(session, "2026-10-19", AS_OF)
+    session.commit()
+
+    for pid in (world["fam1"].id, rel.id):
+        page = client.get(f"/patients/{pid}").data
+        assert b"data-pedigree" in page and b'class="ped-svg"' in page
+        assert b'data-release="2023-01-07"' in page and b"Replay history" in page
+        assert b"ped-ring risk-high" in page  # current release: the relative is high risk
+        assert b"Jan 2023" in page and b"Oct 2026" in page
+    # without relatives there is no tree
+    assert b"data-pedigree" not in client.get(f"/patients/{world['gck'].id}").data
+
+    client.post("/logout")
+    login(client, "lab_tech")
+    page = client.get(f"/patients/{world['fam1'].id}").data
+    assert b'class="ped-svg"' in page  # the tree itself: yes
+    assert b"ped-ring" not in page and b"data-release" not in page  # risk: never
+    assert b"ring = genetic risk" not in page

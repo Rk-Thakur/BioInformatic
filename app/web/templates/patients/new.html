@@ -10,6 +10,15 @@
     {{ field.label }} {{ field() }}
     {% for e in field.errors %}<div class="errors">{{ e }}</div>{% endfor %}
   {% endfor %}
+  <p class="small muted" style="margin: 6px 0 0">With “No diabetes” the age at diagnosis is ignored; the person gets a genetic risk level instead of treatment advice.</p>
+  <fieldset class="fieldset">
+    <legend>Family link (optional)</legend>
+    <p class="small muted" style="margin: 0 0 4px">For a relative offered testing because of a patient's result.</p>
+    {% for field in [form.relative_of, form.relation] %}
+      {{ field.label }} {{ field(placeholder='e.g. 5dbf61ce') if field.name == 'relative_of' else field() }}
+      {% for e in field.errors %}<div class="errors">{{ e }}</div>{% endfor %}
+    {% endfor %}
+  </fieldset>
   <div class="row" style="margin-top: 22px"><button type="submit" class="btn accent">Create patient</button><a class="btn ghost" href="{{ url_for('patients.index') }}">Cancel</a></div>
 </form>
 {% endblock %}

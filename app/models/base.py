@@ -16,6 +16,8 @@ OPEN_STATUSES = ("active", "reviewed")
 RUN_TRIGGERS = ("initial", "release", "rule", "medication", "upload")
 RUN_MODES = ("change_driven", "full", "alert_once")
 UPLOAD_STATUSES = ("accepted", "rejected")
+# Stage 7 (DD44): how a healthy tested person is related to the patient who led to the test.
+RELATIONS = ("parent", "sibling", "child")
 
 
 def utcnow():
